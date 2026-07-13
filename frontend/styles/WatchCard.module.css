@@ -1,0 +1,187 @@
+.card {
+  position: relative;
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+}
+
+.imageContainer {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.multiImageContainer {
+  aspect-ratio: unset;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.imageLink {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.imageWrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.multiImageWrapper {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.image {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.7s cubic-bezier(0.2, 0.6, 0.2, 1);
+  filter: saturate(1) contrast(1);
+}
+
+.imageLink:hover .image {
+  transform: scale(1.025);
+}
+
+/* "+N" badge on multi-image preview cards */
+.imageCount {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  padding: 0.35rem 0.625rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  color: #ffffff;
+  background: rgba(12, 12, 12, 0.72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  font-feature-settings: 'tnum';
+  line-height: 1;
+}
+
+/* Meta block — border-top hairline acts as the "image → text" rule */
+.meta {
+  border-top: 1px solid var(--hairline);
+  padding-top: 1.25rem;
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.author {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.author a {
+  color: inherit;
+  transition: color 0.25s ease;
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+}
+
+.author a:hover {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
+.contentLink,
+.titleLink {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.title {
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.32;
+  letter-spacing: -0.012em;
+  color: var(--text-color);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.3s ease;
+}
+
+.titleLink:hover .title {
+  color: var(--accent-color);
+}
+
+.date {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: block;
+}
+
+/* Hero card — dominant lead-story layout on /[handle] page 1 */
+.heroCard {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+.heroCard .imageContainer:not(.multiImageContainer) {
+  aspect-ratio: 4 / 3;
+  background: var(--surface);
+}
+
+.heroCard .image {
+  object-fit: cover;
+}
+
+.heroCard .meta {
+  padding-top: 1.75rem;
+  margin-top: 1.75rem;
+  gap: 0.875rem;
+}
+
+.heroCard .title {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+  -webkit-line-clamp: 4;
+}
+
+.heroCard .author,
+.heroCard .date {
+  font-size: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .heroCard {
+    max-width: 100%;
+  }
+  .heroCard .imageContainer {
+    aspect-ratio: 1;
+  }
+  .heroCard .title {
+    font-size: 1.375rem;
+  }
+}

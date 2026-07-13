@@ -1,0 +1,31 @@
+{
+  "name": "watches-listener",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "start": "npx ts-node index.ts",
+    "backfill": "npx ts-node backfill.ts",
+    "backfill-facets": "npx ts-node backfill-facets.ts",
+    "classify-existing": "npx ts-node classify-existing.ts",
+    "apply-overrides": "npx ts-node apply-overrides.ts",
+    "set-override": "npx ts-node set-override.ts",
+    "fetch-prices": "npx ts-node fetch-product-prices.ts",
+    "reddit-query": "npx ts-node --transpile-only reddit-query.ts",
+    "watch-stats": "npx ts-node watch-stats.ts",
+    "clear-redis": "npx ts-node clear-redis.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "Bluesky listener for #DailyDoodle posts",
+  "dependencies": {
+    "@atproto/api": "^0.13.16",
+    "@inquirer/prompts": "^7.1.0",
+    "ioredis": "^5.4.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0"
+  }
+}

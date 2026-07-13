@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Editor swap / temp files
+*.swp
+*.swo
+*~
+
+# Next.js build output
+.next/
+next-env.d.ts
+
+# Playwright MCP workspace artifacts (screenshots, console logs)
+.playwright-mcp/
+
+# Local debug captures
+cont-out.txt
+listener/bad.txt
+listener/good1.txt
+
+# Top-level screenshot artifacts from design iteration
+/redesign-*.png
+/title-*.png
+/wordmark-*.png
+/favicon-preview*.png
+/richtext-*.png
+
+# Local environment
+.env
+
+# OS / editor noise
+.DS_Store
