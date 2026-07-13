@@ -10,7 +10,6 @@ import styles from '../../../styles/Post.module.css';
 import { getPostIdFromUri } from '../../../lib/utils';
 import RichText, { sliceRichText, findFirstNewlineByte, byteLength, stripTriggerHashtag } from '../../../components/RichText';
 import Pricing from '../../../components/Pricing';
-import Reddit from '../../../components/Reddit';
 
 interface PostPageProps {
   post: Post | null;
@@ -26,16 +25,12 @@ interface PostPageProps {
   isOverview: boolean;
   // Index into `post.imageUrls` of the hero image — usually 0 unless an
   // override is set in __doodles:hero-overrides. On the overview page we
-  // render the hero first, then the cards (Pricing/Reddit), then the rest
-  // of the images. Indices in click-through links are unchanged.
+  // render the hero first, then the pricing card, then the rest of the
+  // images. Indices in click-through links are unchanged.
   heroImageIndex: number;
-  // Master kill-switch for the Reddit card, derived from REDDIT_CARD_ENABLED
-  // in getServerSideProps. When false, the component never mounts (no
-  // /api/reddit fetch, no DOM, no styling).
-  redditCardEnabled: boolean;
 }
 
-export default function HandlePostPage({ post, handle, hashtagWithoutPrefix, numHandlesToWatch, watchMeta, isOverview, heroImageIndex, redditCardEnabled }: PostPageProps) {
+export default function HandlePostPage({ post, handle, hashtagWithoutPrefix, numHandlesToWatch, watchMeta, isOverview, heroImageIndex }: PostPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -196,23 +191,11 @@ export default function HandlePostPage({ post, handle, hashtagWithoutPrefix, num
 
               const heroIdx = Math.min(heroImageIndex, post.imageUrls.length - 1);
               // Pricing renders only on canonical (unique-watch) overviews.
-              // Reddit also renders on follow-ons, but the query/override
-              // lookup needs to resolve to the canonical's basePostId — the
-              // follow-on's own meta doesn't carry the reddit_query override.
               const showCards = !!watchMeta?.brand && !!watchMeta.model && isOverview;
               const isUnique = watchMeta?.kind === 'unique-watch';
-              const isFollowOn = watchMeta?.kind === 'follow-on';
-              const redditPostId = isFollowOn && watchMeta?.references_post_id
-                ? watchMeta.references_post_id
-                : basePostId;
-              const cards = showCards && (
-                <>
-                  {isUnique && <Pricing postId={basePostId} />}
-                  {(isUnique || isFollowOn) && redditCardEnabled && <Reddit postId={redditPostId} />}
-                </>
-              );
+              const cards = showCards && isUnique && <Pricing postId={basePostId} />;
 
-              // Page flow: hero image → cards → rest of images.
+              // Page flow: hero image → pricing card → rest of images.
               return (
                 <>
                   <div className={styles.imageContainer}>
@@ -292,11 +275,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const basePostId = decodedId.split('#')[0];
     const watchMeta = post ? await getWatchMeta(basePostId) : null;
     const heroImageIndex = post ? await getHeroImageIndex(basePostId) : 0;
-    // Reddit card kill-switch. Default-on; flip with REDDIT_CARD_ENABLED=false.
-    const redditFlag = process.env.REDDIT_CARD_ENABLED;
-    const redditCardEnabled = redditFlag == null
-      ? true
-      : !/^(false|0|no|off)$/i.test(redditFlag.trim());
 
     return {
       props: {
@@ -307,7 +285,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         watchMeta,
         isOverview: !hasImageSuffix,
         heroImageIndex,
-        redditCardEnabled,
       },
     };
   } catch (error) {
@@ -321,7 +298,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         watchMeta: null,
         isOverview: false,
         heroImageIndex: 0,
-        redditCardEnabled: false,
       },
     };
   }

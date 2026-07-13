@@ -6,13 +6,12 @@ posts with the configured hashtag, a Claude-powered classifier identifies
 each watch (brand + model, deduplicating follow-on posts about the same
 piece), and a Next.js frontend renders the gallery with per-brand stats and
 filtering, a per-watch pricing widget (eBay listings + manufacturer MSRP),
-a Reddit discussion card, and RSS feeds.
+and RSS feeds.
 
 The hashtag is technically configurable (`HASHTAG_TO_WATCH`, required — the
 listener exits without one), so the ingest pipeline could track anything.
 But everything downstream of ingest — the classifier, canonical watch list,
-pricing widget, Reddit card, brand stats — is watch-specific. This is a
-watch app.
+pricing widget, brand stats — is watch-specific. This is a watch app.
 
 **Naming note:** the project began life as "Daily Doodles", a daily-art
 aggregator. The Redis key prefixes (`all-doodles:*`, `__doodles:*`) are a
@@ -23,7 +22,7 @@ buys nothing. Don't read meaning into them.
 
 ### Core Components
 - **Listener Service** (Node.js/TypeScript) - Polls Bluesky every ~5 minutes for posts with the configured hashtag; classifies each new post inline via `claude -p`
-- **Frontend** (Next.js/React) - Server-rendered gallery with auto-refresh, brand stats/filtering, pricing + Reddit widgets on post pages
+- **Frontend** (Next.js/React) - Server-rendered gallery with auto-refresh, brand stats/filtering, pricing widget on post pages
 - **Redis** - Single source of truth: posts, per-handle indices, classifier output, overrides, widget caches, session persistence
 - **Docker Compose** - Service orchestration and deployment
 
@@ -31,7 +30,7 @@ buys nothing. Don't read meaning into them.
 1. Listener polls the Bluesky search API for posts with the configured hashtag (optionally restricted to `HANDLES_TO_WATCH`)
 2. Posts with images are stored in Redis — one `Post` entry per image — in a unified store (`all-doodles:posts` + per-URI keys + per-handle URI indices)
 3. Each new post runs through the watch classifier (brand/model/kind), feeding the canonical unique-watch list and per-brand stats
-4. Frontend serves galleries (all posts or per-handle), post pages with pricing/Reddit cards, and RSS feeds
+4. Frontend serves galleries (all posts or per-handle), post pages with the pricing widget, and RSS feeds
 
 ## Quick Start
 
@@ -90,9 +89,8 @@ npm run backfill            # Import hardcoded historical posts
 npm run backfill-facets     # Re-fetch facets (rich-text URIs/tags/mentions) for legacy posts
 npm run classify-existing   # Run the watch classifier on un-classified posts (see below)
 npm run apply-overrides     # Apply manual overrides + rebuild canonical + refresh product prices (no Claude calls)
-npm run set-override        # Set a single partial-override field (search_query/product_url/reddit_query) on one post and apply it. `npm run set-override -- <postId> <field> <value>`
+npm run set-override        # Set a single partial-override field (search_query/product_url) on one post and apply it. `npm run set-override -- <postId> <field> <value>`
 npm run fetch-prices        # Manually refresh manufacturer product prices for posts with `product_url` overrides
-npm run reddit-query        # Preview the Reddit card results for a query. `npm run reddit-query -- "<query>"`
 npm run watch-stats         # Read-only summary of classifier output
 npm run clear-redis         # Wipe stored data (destructive — dev resets only)
 ```
@@ -123,7 +121,7 @@ in this repo) and is also symlinked from `~/.claude/skills/watch-classifier`
 for interactive use. The listener calls `claude -p` non-interactively at
 post-processing time and stores results in these Redis keys:
 
-- `__doodles:watch-meta` — Hash, basePostId → JSON `{kind, brand, model, references_post_id, confidence, classified_at, search_query?, product_url?, reddit_query?}`. The three optional fields are widget overrides; see "Pricing Overrides" and "Reddit Card".
+- `__doodles:watch-meta` — Hash, basePostId → JSON `{kind, brand, model, references_post_id, confidence, classified_at, search_query?, product_url?}`. The two optional fields are pricing-widget overrides; see "Pricing Overrides".
 - `__doodles:watch-canonical` — List, oldest first, JSON `{post_id, brand, model}` for each unique watch. Drives the canonical-list context the classifier sees on subsequent posts (so post N+1 can be matched against post N's identified watches).
 - `__doodles:watch-overrides` — Hash, basePostId → JSON (same shape as `watch-meta`). See the "Watch classification overrides" section below.
 - `__doodles:product-prices` — Hash, basePostId → JSON `{value, currency, productUrl, productDomain, fetchedAt}`. Populated by the listener from `product_url` overrides; consumed by the per-post pricing widget. See "Pricing Overrides".
@@ -151,8 +149,7 @@ Value is a JSON blob with the same shape as `__doodles:watch-meta`:
   "confidence": 1.0,
   "classified_at": "2026-04-25T00:00:00Z",
   "search_query": "Tudor Black Bay 58 39mm",
-  "product_url": "https://www.tudorwatch.com/.../m79030n-0001",
-  "reddit_query": "Black Bay 58"
+  "product_url": "https://www.tudorwatch.com/.../m79030n-0001"
 }
 ```
 
@@ -163,17 +160,16 @@ null otherwise. `confidence` and `classified_at` are stamped by the
 classifier; for hand-written overrides set `confidence: 1.0` and any
 ISO-8601 timestamp.
 
-`search_query`, `product_url`, and `reddit_query` are optional widget
-overrides — see "Pricing Overrides" and "Reddit Card" below for what they
-do and how to set them. Omit them entirely if you only need to correct
-the classifier output.
+`search_query` and `product_url` are both optional pricing overrides — see
+the "Pricing Overrides" section below for what they do and how to set
+them. Omit them entirely if you only need to correct the classifier output.
 
 **Full vs. partial overrides.** An override JSON with `kind` set is a *full
 override* — it replaces the classifier's meta wholesale. An override
 JSON without `kind` (e.g. `{"search_query":"…"}`) is a *partial override*
 — `apply-overrides` merges just the listed fields on top of the existing
 meta. Partial overrides only patch the allow-listed fields (`search_query`,
-`product_url`, `reddit_query`); unknown fields are ignored, and a partial
+`product_url`); unknown fields are ignored, and a partial
 override against a post with no existing meta is skipped with a warning
 (classify the post first via `classify-existing`).
 
@@ -263,9 +259,8 @@ checked first on every classify call).
 | `classify-existing` | Walks every post in `all-doodles:posts`, classifies any missing from `watch-meta`. Skips already-classified posts. | Tokens (Claude calls — Sonnet by default) | First-time bootstrap on a Redis with no prior classification, or after the listener was offline / running without `claude` and posts piled up un-classified. |
 | `classify-existing -- --force` | Re-classifies **every** post from scratch. Clears the canonical list at start, rebuilds it incrementally. | Full corpus token cost | Only after editing `SKILL.md` and wanting a fresh corpus-wide pass. **Don't kill mid-run** — leaves canonical partial; recover with `apply-overrides`. |
 | `apply-overrides` | Pure Redis + (if any override has `product_url`) network fetches to those manufacturer pages. Copies `watch-overrides` into `watch-meta`, rebuilds `watch-canonical` from existing meta by walking `all-doodles:posts` chronologically, and refreshes `__doodles:product-prices` for every override with a `product_url`. | Free in Redis-only mode; small egress when `product_url` is set | After setting / removing an override; also after any of the failure modes below. |
-| `set-override` | One-shot per-post override setter. Merges a single field into the override JSON, applies it to `watch-meta`, and (for `product_url`) fetches the price inline. Skips the canonical rebuild — only supports the partial-override allow-list (`search_query`, `product_url`, `reddit_query`). | Free in Redis-only mode; one outbound HTTP request for `product_url` changes | The fastest path for the common widget-override workflow (one field at a time). Use `apply-overrides` for full classification changes that need canonical rebuilt. |
+| `set-override` | One-shot per-post override setter. Merges a single field into the override JSON, applies it to `watch-meta`, and (for `product_url`) fetches the price inline. Skips the canonical rebuild — only supports the partial-override allow-list (`search_query`, `product_url`). | Free in Redis-only mode; one outbound HTTP request for `product_url` changes | The fastest path for the common pricing-override workflow (one field at a time). Use `apply-overrides` for full classification changes that need canonical rebuilt. |
 | `fetch-prices` | Refreshes `__doodles:product-prices` by re-fetching every `product_url` in `watch-meta` and extracting JSON-LD `Product.offers.price`. Supports `--post=<basePostId>` to fetch one. | Free; just outbound HTTP | Manually re-fetch outside the listener's 6h cadence — e.g., after pasting a new product URL into an override and not wanting to wait. The listener does this automatically on its `PRICE_REFRESH_FREQ_SECONDS` schedule. |
-| `reddit-query -- "<q>"` | Prints the same filtered Reddit posts the per-post Reddit card would show. Cross-imports `frontend/lib/reddit.ts` so backend / sort / filter stay in lockstep with the live API. | Free; one outbound HTTP per backend call | Prototyping a `reddit_query` override — try several phrasings, pick the one that returns the most relevant titles, then commit it via `set-override`. |
 | `watch-stats` | Read-only summary of classifier output. Flags: `--low-confidence`, `--list-other`. | Free | Sanity-check classifier output and find entries that need a manual override. |
 
 **Overrides persist across all of the above** — they're consulted first on every `classifyAndRecord` call, and `apply-overrides` always re-applies them on top of meta. Setting an override is "sticky"; you can re-classify or rebuild canonical as much as you want without losing your manual corrections.
@@ -422,71 +417,6 @@ until you manually `HDEL` it.
 follow-on page resolves to the canonical's `basePostId` before looking
 up overrides and prices, so one override entry covers the whole family.
 
-### Reddit Card
-
-The per-post Reddit card surfaces 3 selected discussions about each watch.
-Backend strategy: Arctic Shift primary (current scores and recent posts,
-fanned out across an operator-configured subreddit list since its
-`title` search requires pairing with a subreddit), PullPush fallback
-(site-wide title search via `q`, used when Arctic Shift is down or
-rate-limit-exhausted).
-
-The search query defaults to the classifier's `${brand} ${model}`; set a
-`reddit_query` partial override to replace it for a given watch
-(`npm run set-override -- <postId> reddit_query "<query>"` — prototype
-phrasings first with `npm run reddit-query -- "<query>"`).
-
-**Known limitation: archive staleness on deletion.** Both Arctic Shift
-and PullPush freeze each post's metadata at the moment they index it.
-Posts deleted *later* on Reddit's live site still surface as live in
-both archives. The card layers two best-effort filters to compensate
-(drop in-archive removals via `removed_by_category` / `is_robot_indexable`
-/ `selftext=[removed]`; collapse same-author near-duplicate titles to
-their highest-scoring entry, which catches the common mod-removed-as-
-dupe pattern) — but isolated after-archive deletions will still slip
-through. A full fix requires the Reddit Data API (OAuth) for live
-status verification, not yet built. The `REDDIT_CARD_ENABLED`
-kill-switch exists for this reason — note that `docker-compose.yml`
-currently defaults it to `false`, so Docker deployments ship with the
-card **off** until you set `REDDIT_CARD_ENABLED=true` in `.env` (outside
-Docker, the code default is on).
-
-**Configured subreddit list** — `__doodles:reddit-subreddits` is a Redis
-list (oldest first) of subreddit names to query when Arctic Shift is the
-active backend (which is the primary path). Each entry is one subreddit
-name, with or without an `r/` prefix. The lib iterates the list,
-deduplicates by post ID across subreddits, and merges into a single
-result set before filtering — broader coverage than any one sub for the
-long-tail microbrand queries that benefit most from this card.
-
-```bash
-# Inspect
-redis-cli LRANGE __doodles:reddit-subreddits 0 -1
-
-# Append a sub
-redis-cli RPUSH __doodles:reddit-subreddits AutomaticWatches
-
-# Remove a sub (LREM count=0 means "remove all matching")
-redis-cli LREM __doodles:reddit-subreddits 0 AutomaticWatches
-
-# Reseed from scratch
-redis-cli DEL __doodles:reddit-subreddits
-redis-cli RPUSH __doodles:reddit-subreddits Watches MicrobrandWatches VintageWatches JapaneseWatches
-```
-
-If the key is missing or empty (e.g. fresh install), the lib falls back
-to the same four defaults: `Watches`, `MicrobrandWatches`,
-`VintageWatches`, `JapaneseWatches`. Changes take effect on the next
-cache-miss fetch — to apply immediately, also flush the per-query cache:
-
-```bash
-redis-cli --scan --pattern '__doodles:reddit-search:*' | xargs -r redis-cli DEL
-```
-
-The `reddit_query` partial override composes with this list — the
-override changes the *query* sent to each subreddit; the list controls
-*which* subreddits get the query.
-
 ### Tools (./tools/)
 ```bash
 # Query specific post data and save to JSON file
@@ -566,7 +496,6 @@ Always test-scan the final asset with a couple of phones before sending it to pr
 - `REDIS_URL` - Redis connection string (default: `redis://localhost:6379`)
 - `POLLING_FREQ_SECONDS` - Listener polling interval (default: 300)
 - `PRICE_REFRESH_FREQ_SECONDS` - Cadence for refreshing manufacturer product prices via `fetch-prices` from inside the listener loop (default: 21600 = 6h). Only relevant if any `__doodles:watch-overrides` entries carry a `product_url`. The refresh runs after each polling tick that crosses the threshold, throttled via `__doodles:product-prices:last-refresh`.
-- `REDDIT_CARD_ENABLED` - Master kill-switch for the per-post Reddit card. Code default is `true`, but `docker-compose.yml` defaults it to `false` — set it explicitly in `.env` for Docker deployments. Useful while the underlying archives (Arctic Shift, PullPush) lack live deletion tracking — see "Reddit Card".
 - `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`, `EBAY_ENV` - eBay Browse API credentials for the pricing widget. `EBAY_ENV` is `production` or `sandbox` (default sandbox; sandbox returns synthetic data unsuitable for live).
 - `HANDLES_TO_WATCH` - Comma-separated list of Bluesky handles to limit the collection to. First handle in the list is shown as the deployment owner on the gallery. Also enables multi-image grouping on gallery cards.
 - `SITE_TITLE` - Human-readable wordmark for the gallery masthead (e.g. `Ryan's Watches`). Falls back to the hashtag itself when unset.
@@ -659,15 +588,14 @@ via the `handle:*` indices):
 - `__doodles:watch-overrides` - Hash of manual classification/widget overrides
 - `__doodles:product-prices` - Hash of scraped manufacturer prices (+ `:last-refresh` throttle key)
 - `__doodles:hero-overrides` - Hash mapping base post IDs to the gallery-preview image index (see [Hero Image Overrides](#hero-image-overrides))
-- `__doodles:reddit-subreddits` - List of subreddits the Reddit card queries
-- `__doodles:ebay-pricing:*`, `__doodles:reddit-search:*` - 24h widget response caches
+- `__doodles:ebay-pricing:*` - 24h eBay response cache
 
 ## Frontend Features
 
 ### Routing
 - `/` - All posts gallery, paginated (50/page), 5-minute auto-refresh
 - `/[handle]` - User-specific gallery with a dominant hero card on page 1 (e.g., `/ryanjoseph.dev`)
-- `/post/[id]` - Individual post pages with pricing widget, Reddit card, rich-text rendering, and back navigation
+- `/post/[id]` - Individual post pages with pricing widget, rich-text rendering, and back navigation
 - `/[handle]/post/[id]` - User-scoped post pages
 - `/rss.xml` - RSS feed, cached 1 hour (supports `?handle=` parameter)
 
@@ -747,7 +675,6 @@ npm run dev
 - `GET /api/custom-users` - Sorted list of every handle that has posted (from `handles:all`)
 - `GET /api/watch-stats` - Classifier aggregates: unique-watch count, brand count, per-brand counts
 - `GET /api/pricing?postId=<basePostId>` - Pricing widget data: eBay listings summary + manufacturer price (24h cache)
-- `GET /api/reddit?postId=<basePostId>` - Reddit card data: filtered discussions for the watch (24h cache; 503 when the kill-switch is off)
 - `GET /rss.xml` - RSS feed (all posts); `?handle=` for a user-specific feed
 
 ### Redis Commands

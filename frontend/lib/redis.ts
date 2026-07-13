@@ -43,7 +43,6 @@ export interface WatchMeta {
   // Optional overrides. See listener/classify-post.ts for the authoritative shape.
   search_query?: string | null;
   product_url?: string | null;
-  reddit_query?: string | null;
 }
 
 export interface CanonicalEntry {
@@ -240,7 +239,7 @@ export async function getAllPosts(handle?: string): Promise<Post[]> {
  * Read the hero-image override for a base post ID. Returns the image
  * index to feature (0 means "no override / use the first image"). The
  * post detail page uses this to decide which image to place above the
- * pricing/reddit cards in the page flow.
+ * pricing card in the page flow.
  */
 export async function getHeroImageIndex(basePostId: string): Promise<number> {
   const client = getRedisClient();

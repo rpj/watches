@@ -10,7 +10,6 @@ import styles from '../../styles/Post.module.css';
 import { getPostIdFromUri } from '../../lib/utils';
 import RichText, { stripTriggerHashtag } from '../../components/RichText';
 import Pricing from '../../components/Pricing';
-import Reddit from '../../components/Reddit';
 
 interface PostPageProps {
   post: Post | null;
@@ -22,11 +21,9 @@ interface PostPageProps {
   isOverview: boolean;
   // See the handle page; same semantics.
   heroImageIndex: number;
-  // Reddit card kill-switch — see the handle page.
-  redditCardEnabled: boolean;
 }
 
-export default function PostPage({ post, backUrl, hashtagWithoutPrefix, watchMeta, isOverview, heroImageIndex, redditCardEnabled }: PostPageProps) {
+export default function PostPage({ post, backUrl, hashtagWithoutPrefix, watchMeta, isOverview, heroImageIndex }: PostPageProps) {
   const { theme, toggleTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -132,20 +129,10 @@ export default function PostPage({ post, backUrl, hashtagWithoutPrefix, watchMet
               };
 
               const heroIdx = Math.min(heroImageIndex, post.imageUrls.length - 1);
-              // Pricing: canonical only. Reddit: canonical + follow-on (resolved
-              // to the canonical's basePostId so reddit_query overrides apply).
+              // Pricing renders on canonical posts only.
               const showCards = !!watchMeta?.brand && !!watchMeta.model && isOverview;
               const isUnique = watchMeta?.kind === 'unique-watch';
-              const isFollowOn = watchMeta?.kind === 'follow-on';
-              const redditPostId = isFollowOn && watchMeta?.references_post_id
-                ? watchMeta.references_post_id
-                : basePostId;
-              const cards = showCards && (
-                <>
-                  {isUnique && <Pricing postId={basePostId} />}
-                  {(isUnique || isFollowOn) && redditCardEnabled && <Reddit postId={redditPostId} />}
-                </>
-              );
+              const cards = showCards && isUnique && <Pricing postId={basePostId} />;
 
               return (
                 <>
@@ -225,10 +212,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     const basePostId = decodedId.split('#')[0];
     const watchMeta = post ? await getWatchMeta(basePostId) : null;
     const heroImageIndex = post ? await getHeroImageIndex(basePostId) : 0;
-    const redditFlag = process.env.REDDIT_CARD_ENABLED;
-    const redditCardEnabled = redditFlag == null
-      ? true
-      : !/^(false|0|no|off)$/i.test(redditFlag.trim());
 
     return {
       props: {
@@ -238,7 +221,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         watchMeta,
         isOverview: !hasImageSuffix,
         heroImageIndex,
-        redditCardEnabled,
       },
     };
   } catch (error) {
@@ -251,7 +233,6 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
         watchMeta: null,
         isOverview: false,
         heroImageIndex: 0,
-        redditCardEnabled: false,
       },
     };
   }

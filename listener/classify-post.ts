@@ -45,14 +45,8 @@ export interface WatchMeta {
   //   product_url: manufacturer's product page URL. The listener
   //     periodically fetches the page and extracts JSON-LD
   //     Product.offers.price into __doodles:product-prices.
-  //   reddit_query: replaces `${brand} ${model}` as the Reddit search
-  //     query for the per-post Reddit card. Separate from search_query
-  //     because Reddit and eBay have different ergonomics — for Reddit
-  //     a tight brand+model is usually best; eBay sometimes needs size
-  //     or finish keywords too.
   search_query?: string | null;
   product_url?: string | null;
-  reddit_query?: string | null;
 }
 
 export interface CanonicalEntry {
@@ -143,7 +137,7 @@ export async function loadRawOverride(redis: Redis, basePostId: string): Promise
 // Fields a *partial* override is allowed to patch onto existing meta.
 // Restricting to an allow-list prevents typo'd or unknown keys from
 // silently polluting watch-meta.
-const PARTIAL_OVERRIDE_FIELDS = ['search_query', 'product_url', 'reddit_query'] as const;
+const PARTIAL_OVERRIDE_FIELDS = ['search_query', 'product_url'] as const;
 
 /**
  * Extract the patchable fields from a raw override object. Empty-string
@@ -192,9 +186,6 @@ export function validateMeta(input: any): WatchMeta | null {
   }
   if (typeof input.product_url === 'string' && input.product_url.trim()) {
     meta.product_url = input.product_url.trim();
-  }
-  if (typeof input.reddit_query === 'string' && input.reddit_query.trim()) {
-    meta.reddit_query = input.reddit_query.trim();
   }
   return meta;
 }

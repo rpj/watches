@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is the Next.js frontend for "Watches" — a Bluesky watch-collection gallery. It displays posts collected by the listener service: gallery views (all posts and per-handle), individual post pages with a pricing widget and Reddit discussion card, classifier-driven brand stats/filtering, and RSS feeds. Design language is warm paper-and-ink minimalism with a bronze accent.
+This is the Next.js frontend for "Watches" — a Bluesky watch-collection gallery. It displays posts collected by the listener service: gallery views (all posts and per-handle), individual post pages with a pricing widget, classifier-driven brand stats/filtering, and RSS feeds. Design language is warm paper-and-ink minimalism with a bronze accent.
 
 Never hardcode secrets (passwords, API keys, tokens) in any file — see the Security Policy in the root CLAUDE.md. Use environment variables.
 
@@ -24,7 +24,6 @@ The application centers around the `Post` type (defined in `lib/redis.ts`) which
 ### Data Sources
 - **Redis**: Primary data store. Posts live in the `all-doodles:posts` list, with `post:<uri>` keys for direct lookup and `handle:<handle>:posts` URI lists per author (`getPosts` supports both the new URI format and the legacy numeric-index format). Classifier state is in `__doodles:watch-meta` / `__doodles:watch-canonical`; widget overrides and caches in other `__doodles:*` keys.
 - **eBay Browse API**: `lib/ebay.ts` — recent-listings search for the pricing widget (24h Redis cache)
-- **Reddit archives**: `lib/reddit.ts` — Arctic Shift primary / PullPush fallback for the Reddit card (24h Redis cache)
 - **External Images**: Served from `cdn.bsky.app` and `bsky.social` (configured in `next.config.js`)
 
 ### Key Architecture Patterns
@@ -51,7 +50,6 @@ API routes (all rate-limited, CORS-restricted to ryanswatches.com in production)
 - `/api/custom-users` - All handles that have posted (from `handles:all`)
 - `/api/watch-stats` - Classifier aggregates (unique watches, brands, per-brand counts)
 - `/api/pricing?postId=` - Pricing widget data (eBay + manufacturer price)
-- `/api/reddit?postId=` - Reddit card data (503 when `REDDIT_CARD_ENABLED` is off)
 
 ## Styling Approach
 
@@ -61,7 +59,7 @@ API routes (all rate-limited, CORS-restricted to ryanswatches.com in production)
 - `Home.module.css` - Gallery pages
 - `WatchCard.module.css` - Gallery cards
 - `Post.module.css` - Individual post pages
-- `Pricing.module.css` / `Reddit.module.css` / `Stats.module.css` / `Pagination.module.css` - Widgets
+- `Pricing.module.css` / `Stats.module.css` / `Pagination.module.css` - Widgets
 
 **Typography**: Google Fonts 'Schibsted Grotesk' (body/UI) and 'Lato' (accents).
 
@@ -75,7 +73,7 @@ API routes (all rate-limited, CORS-restricted to ryanswatches.com in production)
 
 **Error Handling**: Redis connection errors gracefully handled in API routes with appropriate HTTP status codes.
 
-**Performance**: RSS feed cached for 1 hour, gallery auto-refreshes every 5 minutes on the client, eBay/Reddit responses cached 24h in Redis.
+**Performance**: RSS feed cached for 1 hour, gallery auto-refreshes every 5 minutes on the client, eBay responses cached 24h in Redis.
 
 ## Testing Policy
 **IMPORTANT**: Do not run tests, builds, or any validation commands unless explicitly requested in the prompt. The user will handle all testing and provide feedback on any errors or changes needed.
