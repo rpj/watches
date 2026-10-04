@@ -19,11 +19,11 @@ Every request carries `Authorization: Bearer <WEAR_API_TOKEN>`.
 - Comparison is constant-time (`crypto.timingSafeEqual` over SHA-256 digests).
 - The token is never logged and never echoed back.
 - `WEAR_API_TOKEN` is read on every request, not cached at module load.
-- Auth runs **before** rate limiting, so unauthenticated probes still cost the caller a rate-limit slot but never leak timing from the data layer.
+- The rate limiter runs **before** auth, so failed-token probes consume rate-limit slots and token guessing is throttled to the per-IP budget below. Auth runs before any data-layer access or method check, so a bad token always yields 401 (or 503), never 405.
 
 Rate limit: 60 requests/minute per client IP (`x-forwarded-for`, which Caddy sets, falling back to socket address). Existing `X-RateLimit-*` headers; over limit → `429 {"error":"Too many requests. Please try again later."}` with `Retry-After`.
 
-Content: JSON only. POST bodies over 8 KB are rejected by Next's body parser. Wrong method → `405 {"error":"Method not allowed"}`. Every error body is `{ "error": "<human readable>" }`.
+Content: JSON only. Wrong method → `405 {"error":"Method not allowed"}`. Every error body produced by the routes is `{ "error": "<human readable>" }`. One exception: POST bodies over 8 KB are rejected by Next's body parser itself with a `413` and a plain-text body before the route runs.
 
 No CORS headers are set: the only client is a native app.
 

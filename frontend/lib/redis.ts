@@ -302,7 +302,7 @@ export async function getWatchStats(): Promise<WatchStats> {
 // Redis hash where the field is the base post ID (e.g. "3mjve4rdk7k2c") and
 // the value is the zero-based image index to feature. Only applies to grouped
 // multi-image posts; the post detail page keeps the original order.
-async function applyHeroOverrides(
+export async function applyHeroOverrides(
   client: Redis,
   posts: Post[]
 ): Promise<Post[]> {
