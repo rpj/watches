@@ -12,7 +12,7 @@ enum ConnectError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Enter a valid http(s) URL"
+        case .invalidURL: return "Enter a valid https URL"
         case .emptyToken: return "Enter the API token"
         case .server(let message): return message
         }
@@ -117,8 +117,10 @@ final class AppModel {
         let token = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !token.isEmpty else { throw ConnectError.emptyToken }
         let trimmed = serverURL.absoluteString.trimmingCharacters(in: .whitespacesAndNewlines)
+        // https only: the token travels as a bearer header, and App Transport
+        // Security would reject plain http anyway. Fail early with a clear message.
         guard let url = URL(string: trimmed),
-              let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https",
+              url.scheme?.lowercased() == "https",
               url.host() != nil else {
             throw ConnectError.invalidURL
         }

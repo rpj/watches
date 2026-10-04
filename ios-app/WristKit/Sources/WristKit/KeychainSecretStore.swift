@@ -3,9 +3,10 @@ import Security
 import WristCore
 
 /// Keychain-backed SecretStore shared between the app and the widget via the
-/// App Group access group. Items are `AfterFirstUnlock` so notification
-/// actions and widget intents can read the token after a reboot without the
-/// phone being unlocked again.
+/// App Group access group. Items are `AfterFirstUnlockThisDeviceOnly`: readable
+/// by notification actions and widget intents after a reboot without the
+/// phone being unlocked again, but never migrated to another device through a
+/// backup or iCloud Keychain (re-paste the token on a new phone).
 public final class KeychainSecretStore: SecretStore, @unchecked Sendable {
     public enum KeychainError: Error, Equatable {
         case unexpectedStatus(OSStatus)
@@ -44,7 +45,7 @@ public final class KeychainSecretStore: SecretStore, @unchecked Sendable {
             let query = self.baseQuery(for: key, accessGroup: group)
             let attributes: [String: Any] = [
                 kSecValueData as String: data,
-                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,
+                kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
             ]
             let update = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
             switch update {
