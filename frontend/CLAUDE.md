@@ -13,6 +13,8 @@ Never hardcode secrets (passwords, API keys, tokens) in any file — see the Sec
 - `npm run dev` - Start development server on port 42420 (hard-coded in the dev script)
 - `npm run build` - Build for production
 - `npm run start` - Start production server (respects PORT env var, default 3000)
+- `npm test` - vitest suite (unit + integration against Redis logical DB 15 only; `tests/redis-guard.ts` aborts otherwise)
+- `npm run typecheck` - `tsc --noEmit`
 
 (No lint script — this project doesn't use ESLint.)
 
@@ -22,7 +24,7 @@ Never hardcode secrets (passwords, API keys, tokens) in any file — see the Sec
 The application centers around the `Post` type (defined in `lib/redis.ts`) which represents a Bluesky post with associated metadata. Each post can have multiple images, and the system creates separate entries for each image (identified by URI + image index). `lib/redis.ts` also defines `WatchMeta` (classifier output) and `WatchStats` (brand aggregates).
 
 ### Data Sources
-- **Redis**: Primary data store. Posts live in the `all-doodles:posts` list, with `post:<uri>` keys for direct lookup and `handle:<handle>:posts` URI lists per author (`getPosts` supports both the new URI format and the legacy numeric-index format). Classifier state is in `__doodles:watch-meta` / `__doodles:watch-canonical`; widget overrides and caches in other `__doodles:*` keys.
+- **Redis**: Primary data store. Posts live in the `all-doodles:posts` list, with `post:<uri>` keys for direct lookup and `handle:<handle>:posts` URI lists per author (`getPosts` supports both the new URI format and the legacy numeric-index format). Classifier state is in `__doodles:watch-meta` / `__doodles:watch-canonical`; widget overrides and caches in other `__doodles:*` keys. Wear-API state (`__doodles:wear-events`, `__doodles:wear-timeline`) is read/written by `lib/wear.ts`; the contract is `../ios-app/API.md`.
 - **eBay Browse API**: `lib/ebay.ts` — recent-listings search for the pricing widget (24h Redis cache)
 - **External Images**: Served from `cdn.bsky.app` and `bsky.social` (configured in `next.config.js`)
 
@@ -35,6 +37,9 @@ The application centers around the `Post` type (defined in `lib/redis.ts`) which
 **Theme System**: CSS custom properties in `styles/globals.css` define light/dark themes applied via `data-theme` attribute. The `ThemeContext` manages state and localStorage persistence. Dark is the default.
 
 **RSS Generation**: Dynamic RSS feed at `/rss.xml` using `getServerSideProps` to fetch and format data server-side. Public URLs point at `https://ryanswatches.com`.
+
+### Wear API (`pages/api/wear/*`)
+Authenticated routes for the iOS app. `lib/wear-auth.ts` → `requireWearToken` (constant-time bearer check against `WEAR_API_TOKEN`, 503 when unset) runs before the shared rate limiter; `lib/wear.ts` holds the data layer and pure helpers (`compareWearWatches`, `validateWearEventInput`, `thumbnailUrlFor`). No CORS: native client only.
 
 ## Routing Structure
 

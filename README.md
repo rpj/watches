@@ -500,6 +500,7 @@ Always test-scan the final asset with a couple of phones before sending it to pr
 - `HANDLES_TO_WATCH` - Comma-separated list of Bluesky handles to limit the collection to. First handle in the list is shown as the deployment owner on the gallery. Also enables multi-image grouping on gallery cards.
 - `SITE_TITLE` - Human-readable wordmark for the gallery masthead (e.g. `Ryan's Watches`). Falls back to the hashtag itself when unset.
 - `WATCH_CLASSIFIER_MODEL` - Claude model the watch classifier uses (default: `sonnet`). Set to `haiku` for cheaper / noisier classification.
+- `WEAR_API_TOKEN` - Bearer token for the `/api/wear/*` endpoints used by the iOS app (see "Wear API & iOS app"). Unset = wear API disabled (503).
 - `DISABLE_AUTOUPDATER` - Set to `1` in the listener container so `claude` doesn't run the auto-update check on every invocation. Already set in `listener/Dockerfile`.
 - `PORT` - Frontend production server port (default: 3000). The dev server (`npm run dev`) runs on a hard-coded port 42420.
 
@@ -531,6 +532,23 @@ Effects:
   silently ignored.
 
 Changes take effect on the next gallery refresh — no service restart required.
+
+## Wear API & iOS app
+
+`ios-app/` contains **Wrist**, a single-purpose iOS app for logging which watch is on your wrist right now. It talks to a small authenticated API inside the frontend; the full wire contract is in [`ios-app/API.md`](ios-app/API.md) and the implementation plan in [`ios-app/PLAN.md`](ios-app/PLAN.md). Mac-side build/run instructions are in [`ios-app/README.md`](ios-app/README.md).
+
+**Endpoints** (all require `Authorization: Bearer $WEAR_API_TOKEN`; 60 req/min per IP):
+
+| Route | Purpose |
+|---|---|
+| `GET /api/wear/watches` | Every canonical watch with hero image, wear count, last worn, sorted most-worn first, plus the current wear event |
+| `GET /api/wear/events?limit=50` | Recent wear events, newest first |
+| `POST /api/wear/events` | Log a wear (`{id, watchId, wornAt, source}`; idempotent on `id`) |
+| `DELETE /api/wear/events/{id}` | Undo a wear |
+
+**Setup:** generate a token (`openssl rand -hex 32`), set `WEAR_API_TOKEN` in the deployment's `.env`, redeploy the frontend, then paste the same token into the app's setup screen. Leaving the variable unset disables the API entirely (every route returns 503).
+
+**Tests:** `cd frontend && npm test` runs the vitest suite. Integration tests use a real Redis but only logical DB 15 (`redis://localhost:6379/15`) and refuse to start against any other DB; set `WEAR_TEST_REDIS_URL` to point at a different host (keep the `/15`).
 
 ## Data Structure
 
@@ -588,6 +606,8 @@ via the `handle:*` indices):
 - `__doodles:watch-overrides` - Hash of manual classification/widget overrides
 - `__doodles:product-prices` - Hash of scraped manufacturer prices (+ `:last-refresh` throttle key)
 - `__doodles:hero-overrides` - Hash mapping base post IDs to the gallery-preview image index (see [Hero Image Overrides](#hero-image-overrides))
+- `__doodles:wear-events` - Hash, eventId → JSON wear event (which watch was put on, when, from which surface). Written by the wear API.
+- `__doodles:wear-timeline` - Sorted set of wear event IDs scored by worn-at time; drives "currently wearing" and most-worn ordering.
 - `__doodles:ebay-pricing:*` - 24h eBay response cache
 
 ## Frontend Features

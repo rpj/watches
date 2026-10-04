@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Watches is the full-stack engine behind **Ryan's Watches**: a Bluesky-powered watch-collection gallery. A Node.js listener polls Bluesky for posts with the configured hashtag (`HASHTAG_TO_WATCH`, required), a Claude-powered classifier identifies each watch (brand/model, dedup of follow-on posts), and a Next.js frontend renders the gallery with per-brand stats/filtering and a per-watch pricing widget (eBay + manufacturer JSON-LD). Redis stores everything; Docker Compose orchestrates.
+Watches is the full-stack engine behind **Ryan's Watches**: a Bluesky-powered watch-collection gallery. A Node.js listener polls Bluesky for posts with the configured hashtag (`HASHTAG_TO_WATCH`, required), a Claude-powered classifier identifies each watch (brand/model, dedup of follow-on posts), and a Next.js frontend renders the gallery with per-brand stats/filtering and a per-watch pricing widget (eBay + manufacturer JSON-LD). Redis stores everything; Docker Compose orchestrates. A SwiftUI iOS app in `./ios-app/` ("Wrist") logs which watch is being worn via the authenticated `/api/wear/*` routes; see `ios-app/PLAN.md` and `ios-app/API.md`.
 
 Originally built as "Daily Doodles" for daily-art aggregation; the `all-doodles:` / `__doodles:` Redis key prefixes are a historical artifact of that era. Don't rename them and don't read meaning into them.
 
@@ -42,6 +42,8 @@ npm run clear-redis        # Wipe stored data (destructive)
 npm run dev           # Development server on port 42420 (hard-coded in the dev script)
 npm run build         # Production build
 npm run start         # Production server (respects PORT env var, default 3000)
+npm test              # vitest; integration tests hit Redis logical DB 15 only (guarded)
+npm run typecheck     # tsc --noEmit
 ```
 
 There is no lint script — this project intentionally does not use ESLint.
@@ -84,6 +86,7 @@ Posts with multiple images are split into separate `Post` entries with URIs like
 - `all-posts:saved-session` — Bluesky session persistence
 - `__doodles:watch-meta` / `watch-canonical` / `watch-overrides` / `product-prices` / `hero-overrides` — classifier + widget state (see README for full semantics)
 - `__doodles:ebay-pricing:*` — 24h eBay response cache
+- `__doodles:wear-events` (hash eventId → wear event) / `__doodles:wear-timeline` (zset by worn-at ms) — wear API state; see `ios-app/API.md`
 
 ### Styling System
 Warm paper-and-ink minimalism: cream / near-black surfaces with a bronze accent (`#8b6634` light / `#c89456` dark) and hairline borders. CSS custom properties for theming, CSS Modules for component scoping. Fonts: 'Schibsted Grotesk' (body/UI) and 'Lato' (accents). Dark theme is the default.
@@ -99,10 +102,11 @@ Warm paper-and-ink minimalism: cream / near-black surfaces with a bronze accent 
 - `SITE_TITLE` - Masthead wordmark; falls back to the hashtag when unset
 - `WATCH_CLASSIFIER_MODEL` - Claude model for the classifier (default: sonnet)
 - `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`, `EBAY_ENV` - eBay Browse API for the pricing widget (`EBAY_ENV`: production|sandbox, default sandbox)
+- `WEAR_API_TOKEN` - Bearer token for `/api/wear/*` (iOS app). Unset = wear API disabled (503). Read per-request, never logged.
 - `PORT` - Frontend production port (default: 3000). The dev server is hard-coded to 42420.
 
 ## Docker Configuration
 Uses `network_mode: 'host'` for both services. Services auto-restart unless manually stopped. Environment variables sourced from host `.env` file. The listener image bundles the `claude` CLI (pinned, autoupdater disabled) for inline classification.
 
 ## Testing Policy
-**IMPORTANT**: Do not run tests, builds, or any validation commands unless explicitly requested in the prompt. The user will handle all testing and provide feedback on any errors or changes needed.
+**IMPORTANT**: Do not run tests, builds, or any validation commands unless explicitly requested in the prompt. The user will handle all testing and provide feedback on any errors or changes needed. Exception: the wear API / iOS work (`frontend/tests`, `ios-app/WristCore`) has an explicit standing OK to run `npm test`, `npm run typecheck`, and `swift test` (in Docker) against Redis DB 15.
