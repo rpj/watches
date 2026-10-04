@@ -48,6 +48,10 @@ targets:
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait]
         ITSAppUsesNonExemptEncryption: false
         UIUserInterfaceStyle: Automatic
+        # wrist://picker — opened by the widget's non-interactive areas (WristConstants.openURL)
+        CFBundleURLTypes:
+          - CFBundleURLName: com.ryanswatches.wrist
+            CFBundleURLSchemes: [wrist]
     entitlements:
       path: Wrist/Wrist.entitlements
       properties:
