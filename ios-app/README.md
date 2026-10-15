@@ -12,7 +12,7 @@ Wrist is a one-tap "I'm wearing this" logger for the watch collection, with the 
 | `WristWidget/` | Widget extension target. |
 | `WristTests/` | iOS XCTest (Mac only): WristKit seams with fakes. |
 | `WristUITests/` | One smoke XCUITest: launch, tap first row, "Wearing" label updates. |
-| `project.yml` | **Source of truth for the Xcode project.** `Wrist.xcodeproj` is generated from it and gitignored; `Wrist/Info.plist`, `WristWidget/Info.plist` and both `.entitlements` files are generated from it too (committed for convenience, never hand-edited). |
+| `project.yml` | **Source of truth for the Xcode project.** `Wrist.xcodeproj` is generated from it and gitignored; `Wrist/Info.plist`, `WristWidget/Info.plist` and both `.entitlements` files are generated from it too and gitignored. |
 
 ## Requirements
 
