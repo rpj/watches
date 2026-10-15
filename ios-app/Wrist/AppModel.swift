@@ -162,6 +162,8 @@ final class AppModel {
     func log(_ watch: WearWatch, source: WearSource = .app) async {
         guard let store else { return }
         let (event, _) = await store.logWear(watchID: watch.id, source: source)
+        // nil = already wearing it (debounced); nothing changed, no Undo bar.
+        guard let event else { return }
         lastLogged = event
         undoDismiss?.cancel()
         undoDismiss = Task { [weak self] in

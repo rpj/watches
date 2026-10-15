@@ -35,10 +35,14 @@ public actor WearStore {
         public var refreshAfterFlush: Bool
         /// Zone used to stamp `wornAt` on new events.
         public var timeZone: TimeZone
+        /// Tapping the watch that is already current within this many seconds
+        /// is a no-op (matches the server's WEAR_DEBOUNCE_MS). 0 disables.
+        public var debounceInterval: TimeInterval
 
-        public init(refreshAfterFlush: Bool = true, timeZone: TimeZone = .current) {
+        public init(refreshAfterFlush: Bool = true, timeZone: TimeZone = .current, debounceInterval: TimeInterval = 10 * 60) {
             self.refreshAfterFlush = refreshAfterFlush
             self.timeZone = timeZone
+            self.debounceInterval = debounceInterval
         }
     }
 
@@ -158,13 +162,23 @@ public actor WearStore {
 
     /// Record that the user just put on `watchID`. Applies immediately, then
     /// tries to send. Returns the created event (for Undo) and the state after
-    /// the send attempt.
+    /// the send attempt. The event is nil when the tap was a no-op because
+    /// that watch is already current and was logged within
+    /// `Options.debounceInterval` (including still-unsent events).
     @discardableResult
-    public func logWear(watchID: String, source: WearSource) async -> (event: NewWearEvent, state: State) {
+    public func logWear(watchID: String, source: WearSource) async -> (event: NewWearEvent?, state: State) {
+        let now = clock()
+        if options.debounceInterval > 0,
+           let current = derive().current, current.watchId == watchID,
+           let since = WearDates.parse(current.wornAt),
+           abs(now.timeIntervalSince(since)) < options.debounceInterval {
+            return (nil, derive())
+        }
+
         let event = NewWearEvent(
             id: makeID(),
             watchId: watchID,
-            wornAt: WearDates.string(from: clock(), timeZone: options.timeZone),
+            wornAt: WearDates.string(from: now, timeZone: options.timeZone),
             source: source
         )
         pending.append(PendingWearEvent(event: event))
