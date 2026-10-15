@@ -48,6 +48,12 @@ export type ValidationResult<T> = { ok: true; value: T } | { ok: false; error: s
 
 export const EVENT_ID_PATTERN = /^[A-Za-z0-9-]{8,64}$/;
 export const MAX_FUTURE_MS = 24 * 60 * 60 * 1000;
+/**
+ * Re-logging the watch that is already current within this window is a
+ * no-op: it carries no information ("still wearing it") and would only
+ * inflate counts from accidental double taps on the widget or notification.
+ */
+export const WEAR_DEBOUNCE_MS = 10 * 60 * 1000;
 
 const DEFAULT_LIMIT = 50;
 const MAX_LIMIT = 500;
@@ -237,7 +243,9 @@ export async function listWearWatches(): Promise<{ watches: WearWatch[]; current
 
 /**
  * Record a wear event idempotently. Returns created=false with the stored
- * event when the id already exists, or an error for an unknown watchId.
+ * event when the id already exists (retry), or with the current event when
+ * the same watch was logged less than WEAR_DEBOUNCE_MS ago (double tap), or
+ * an error for an unknown watchId.
  */
 export async function recordWear(
   input: WearEventInput,
@@ -250,6 +258,21 @@ export async function recordWear(
     return { ok: false, error: 'Unknown watchId' };
   }
 
+  // Retry of an id we already hold: answer with what was stored.
+  const existing = parseJson<WearEvent>(await client.hget(WEAR_EVENTS_KEY, input.id));
+  if (existing) {
+    return { ok: true, event: existing, created: false };
+  }
+
+  // Same watch as the one currently on the wrist, within the window: no-op.
+  const current = await getCurrentWear();
+  if (current && current.watchId === input.watchId) {
+    const delta = Date.parse(input.wornAt) - Date.parse(current.wornAt);
+    if (Number.isFinite(delta) && Math.abs(delta) < WEAR_DEBOUNCE_MS) {
+      return { ok: true, event: current, created: false };
+    }
+  }
+
   const event: WearEvent = { ...input, recordedAt: now.toISOString() };
   const added = await client.hsetnx(WEAR_EVENTS_KEY, input.id, JSON.stringify(event));
   if (added === 1) {
@@ -257,6 +280,7 @@ export async function recordWear(
     return { ok: true, event, created: true };
   }
 
+  // Lost a race with a concurrent identical id; return whatever won.
   const stored = parseJson<WearEvent>(await client.hget(WEAR_EVENTS_KEY, input.id));
   return { ok: true, event: stored ?? event, created: false };
 }

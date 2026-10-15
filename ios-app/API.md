@@ -96,9 +96,10 @@ Body: `{ "id", "watchId", "wornAt", "source" }` (exactly `WearEvent` minus `reco
 |---|---|
 | Stored | `201 { "event": WearEvent, "created": true }` |
 | `id` already exists | `200 { "event": <the stored event>, "created": false }` — retry-safe; the retry body is ignored |
+| `watchId` is the current watch and `wornAt` is within 10 minutes (either direction) of the current event's `wornAt` | `200 { "event": <the current event>, "created": false }` — double-tap collapse; the submitted `id` is not stored |
 | Malformed JSON, missing/invalid field, `id` fails the pattern, unknown `watchId`, unparseable `wornAt`, `wornAt` more than 24 h in the future, unknown `source` | `400 { "error": "..." }` |
 
-`recordedAt` is set by the server.
+`recordedAt` is set by the server. The collapse window is `WEAR_DEBOUNCE_MS` in `frontend/lib/wear.ts`; the client applies the same rule locally (`WearStore.Options.debounceInterval`, also covering queued unsent events) so a no-op tap never produces an Undo bar or a network call. Switching to another watch and back inside the window is two real wears.
 
 ### `DELETE /api/wear/events/{id}`
 
