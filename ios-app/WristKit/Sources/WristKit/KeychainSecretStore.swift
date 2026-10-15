@@ -102,7 +102,7 @@ public final class KeychainSecretStore: SecretStore, @unchecked Sendable {
         }
     }
 
-    private struct StatusFailure: Error {
+    public struct StatusFailure: Error {
         let status: OSStatus
     }
 }
