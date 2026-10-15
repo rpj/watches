@@ -12,7 +12,7 @@ Wrist is a one-tap "I'm wearing this" logger for the watch collection, with the 
 | `WristWidget/` | Widget extension target. |
 | `WristTests/` | iOS XCTest (Mac only): WristKit seams with fakes. |
 | `WristUITests/` | One smoke XCUITest: launch, tap first row, "Wearing" label updates. |
-| `project.yml` | XcodeGen spec. `Wrist.xcodeproj` is generated and gitignored. |
+| `project.yml` | **Source of truth for the Xcode project.** `Wrist.xcodeproj` is generated from it and gitignored; `Wrist/Info.plist`, `WristWidget/Info.plist` and both `.entitlements` files are generated from it too (committed for convenience, never hand-edited). |
 
 ## Requirements
 
@@ -29,6 +29,16 @@ open Wrist.xcodeproj
 ```
 
 Find your team ID in Xcode > Settings > Accounts, or under Membership at developer.apple.com. If `com.ryanswatches` is taken under your team, change the bundle prefix, bundle IDs, App Group (`group.com.ryanswatches.wrist`) and keychain group in `project.yml` (and the matching strings in WristKit), then regenerate.
+
+### Workflow: `project.yml` is the source of truth
+
+The generated `Wrist.xcodeproj` is disposable. Treat it that way:
+
+- **After pulling, regenerate before building.** Most changes land from a Linux box that cannot open Xcode; a new Swift file or target is only in the project once you run `xcodegen generate`. If Xcode is open it will offer to reload.
+- **Change project settings in `project.yml`, not in Xcode's inspector.** Signing, capabilities, build settings, schemes and Info.plist keys all live in the YAML; anything edited in the Xcode UI is wiped by the next regenerate.
+- **Adding a file** = drop it in the target's folder (`Wrist/`, `WristWidget/`, `WristTests/`, `WristUITests/`) and regenerate. Targets pick up their folders recursively.
+- **Package code** (`WristCore/`, `WristKit/`) needs no regenerate; SwiftPM sees new files directly.
+- A one-liner for the common case: `DEVELOPMENT_TEAM=YOUR_TEAM_ID xcodegen generate && open Wrist.xcodeproj`. Put `export DEVELOPMENT_TEAM=...` in your shell profile to drop the prefix.
 
 ## Run in the simulator
 
@@ -86,6 +96,8 @@ curl -sS -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $WEAR_API_TO
 ## Troubleshooting
 
 - **"Signing for Wrist requires a development team"**: set `DEVELOPMENT_TEAM` and run `xcodegen generate` again.
+- **A setting you changed in Xcode disappeared**: that is the regenerate doing its job. Put the change in `project.yml` and regenerate.
+- **A new file from the repo is missing from the target / "cannot find X in scope"**: you pulled but did not regenerate. Run `xcodegen generate`.
 - **"No such module WristKit" / "WristCore"**: File > Packages > Resolve Package Versions, or regenerate the project.
 - **Widget not updating**: remove and re-add the widget; confirm the App Group id is identical in both entitlements files.
 - **Notifications not showing in the simulator**: allow them under Settings app > Wrist > Notifications, and make sure the app was foregrounded once after enabling the nudge.
