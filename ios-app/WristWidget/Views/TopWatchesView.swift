@@ -4,6 +4,12 @@ import WidgetKit
 import WristCore
 import WristKit
 
+/// Interactive widget content.
+///
+/// Design rule: the current-watch block is a plain view, never a button, so
+/// there is always an area that opens the app. iOS can replace the app icon
+/// with this widget in place, at which point the widget may be the app's only
+/// presence on the Home Screen. Only the capsule chips run `LogWearIntent`.
 struct TopWatchesView: View {
     let entry: WearEntry
     @Environment(\.widgetFamily) var family
@@ -19,6 +25,8 @@ struct TopWatchesView: View {
                 }
             }
             .redacted(reason: entry.isPlaceholder ? .placeholder : [])
+            // Any tap outside a chip opens the picker.
+            .widgetURL(WristConstants.openURL)
     }
 
     // MARK: - Content
@@ -33,13 +41,12 @@ struct TopWatchesView: View {
                     .multilineTextAlignment(.center)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .widgetURL(WristConstants.openURL)
         } else {
             switch family {
             case .systemMedium:
                 mediumBody
             default:
-                currentBlock
+                smallBody
             }
         }
     }
@@ -50,61 +57,72 @@ struct TopWatchesView: View {
         entry.state.watches.first { $0.id == entry.state.current?.watchId }
     }
 
+    /// Most-worn three, including the current watch: on a new day re-logging
+    /// it is a real wear, and inside the debounce window the tap is a no-op.
     private var chips: [WearWatch] {
-        Ranking.topWatches(entry.state.watches, limit: 3, excluding: current?.id)
+        Ranking.topWatches(entry.state.watches, limit: 3)
     }
 
     private var labels: [String] {
         Ranking.shortLabels(for: chips, maxLength: 16)
     }
 
-    // MARK: - Current watch
+    // MARK: - Small
 
-    @ViewBuilder
-    private var currentBlock: some View {
-        if let current {
-            watchButton(current, caption: "WEARING")
-        } else if let first = chips.first {
-            watchButton(first, caption: "TAP TO LOG")
-        } else {
-            Text("Nothing logged yet")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private var smallBody: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            currentCard
+            Spacer(minLength: 0)
+            if let current {
+                chip(for: current, label: "Log again", systemImage: "arrow.counterclockwise")
+            } else if let first = chips.first {
+                chip(for: first, label: Ranking.shortLabel(for: first, maxLength: 14), systemImage: "plus")
+            }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func watchButton(_ watch: WearWatch, caption: String) -> some View {
-        Button(intent: LogWearIntent(watchID: watch.id)) {
-            VStack(alignment: .leading, spacing: 6) {
-                WidgetThumbnail(data: entry.thumbnails[watch.id], brand: watch.brand, size: 44)
-                Spacer(minLength: 0)
-                Text(caption)
+    // MARK: - Current watch (plain; tapping opens the app)
+
+    @ViewBuilder
+    private var currentCard: some View {
+        if let current {
+            VStack(alignment: .leading, spacing: 3) {
+                WidgetThumbnail(data: entry.thumbnails[current.id], brand: current.brand, size: 36)
+                Text("WEARING")
                     .font(.caption2)
                     .tracking(1)
                     .foregroundStyle(.secondary)
-                Text(watch.brand)
+                Text(current.brand)
                     .font(.headline)
                     .lineLimit(1)
-                Text(watch.model)
+                Text(current.model)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        } else {
+            VStack(alignment: .leading, spacing: 3) {
+                Image(systemName: "clock")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                Text("Nothing logged yet")
+                    .font(.footnote.weight(.semibold))
+                Text("Tap to open Wrist")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Medium
 
     private var mediumBody: some View {
-        GeometryReader { proxy in
-            HStack(spacing: 12) {
-                currentBlock
-                    .frame(width: proxy.size.width * 0.45)
-                chipColumn
-            }
+        HStack(alignment: .top, spacing: 12) {
+            currentCard
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            chipColumn
+                .frame(maxWidth: .infinity, alignment: .top)
         }
     }
 
@@ -118,22 +136,43 @@ struct TopWatchesView: View {
         } else {
             VStack(spacing: 6) {
                 ForEach(Array(zip(chips, labels)), id: \.0.id) { watch, label in
-                    Button(intent: LogWearIntent(watchID: watch.id)) {
-                        HStack(spacing: 8) {
-                            WidgetThumbnail(data: entry.thumbnails[watch.id], brand: watch.brand, size: 22)
-                            Text(label)
-                                .font(.footnote.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 10)
-                        .frame(maxWidth: .infinity, minHeight: 32)
-                        .background(Color.accentColor.opacity(0.15), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
+                    chip(
+                        for: watch,
+                        label: label,
+                        systemImage: watch.id == current?.id ? "checkmark" : nil,
+                        showThumbnail: true
+                    )
                 }
             }
         }
+    }
+
+    // MARK: - Chip (the only interactive element)
+
+    private func chip(for watch: WearWatch, label: String, systemImage: String? = nil, showThumbnail: Bool = false) -> some View {
+        Button(intent: LogWearIntent(watchID: watch.id)) {
+            HStack(spacing: 8) {
+                if showThumbnail {
+                    WidgetThumbnail(data: entry.thumbnails[watch.id], brand: watch.brand, size: 22)
+                } else if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.caption.weight(.semibold))
+                }
+                Text(label)
+                    .font(.footnote.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                if showThumbnail, let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Color.accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 28)
+            .background(Color.accentColor.opacity(0.15), in: Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
