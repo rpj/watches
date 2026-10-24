@@ -193,3 +193,109 @@ Paste any compiler errors back to me. Then in the simulator: Setup → paste tok
 
 ## Out of scope (possible follow-ups)
 Showing "currently wearing" on the website; hiding sold/fake entries from the picker (`__doodles:wear-hidden` set); Siri `AppEntity` for "log my Speedmaster"; wear-duration analytics; Apple Watch companion.
+
+---
+
+# TODO.md follow-ups: icon, search, hold-to-log, wearing card, wearage page
+
+## Context
+
+The Wrist app and wear API shipped on branch `ios-app` and have real data (one event so far). `TODO.md` lists five follow-ups: three in the app (icon, search, mis-tap protection) and two on the site (a "last one on my wrist" card, a percentage-based "wearage" page with a 7-hour nightly deduction). Decisions already made with you:
+
+- **Card** sits under the brands list in the front-page header.
+- **Mis-taps**: hold-to-log with a filling ring (~0.65 s), plus a History screen with swipe-to-delete. Widget chips stay tap-to-log.
+- **Wearage math**: a watch is credited from its event until the next event (latest runs to now); at the end of every local day, 7 hours come off whichever watch is on the wrist; the page shows each watch's share of that awake wrist-time, all-time and last 30 days, never hours. Local day via `WEAR_TIMEZONE` (default `America/Los_Angeles`), deduction via `WEAR_SLEEP_HOURS` (default 7). Wear data becomes public on the site.
+
+Verified facts: no new dependencies are needed (`sharp` 0.34 is already in `frontend` and rasterizes SVG; Node 20 has full ICU for `Intl` time zones; `date-fns` v2 has no tz support so day math uses `Intl`). The front page already polls `/api/watch-stats` every 5 minutes, so the card can ride that interval. `/wearage` as a static route wins over the `/[handle]` dynamic route.
+
+---
+
+## Part A — Backend data + one public route (`frontend/`)
+
+### A1. `lib/wearage.ts` (pure, Linux-tested) — me
+```ts
+export interface WearageOptions { timeZone: string; sleepHours: number; now: Date; since?: Date }
+export interface WearageShare { watchId: string; ms: number; share: number; wears: number; lastWornAt: string | null }
+export interface WearageSummary { totalMs: number; daysTracked: number; firstEventAt: string | null; shares: WearageShare[] }
+export function computeWearage(events: WearEvent[], opts: WearageOptions): WearageSummary
+export function localDayStart(ms: number, timeZone: string): number   // Intl-based, DST-safe
+export function nextLocalDayStart(ms: number, timeZone: string): number
+```
+Algorithm: sort events by `wornAt`; interval i = `[e_i, e_{i+1})`, last = `[e_n, now)`; clip to `[since, now)` (an interval that began before `since` counts from `since`); split at local-day boundaries; for every **completed** day, the interval touching the day's end loses `min(sleepHours h, its ms in that day)` (clamp, no spill to earlier watches; the current partial day gets no deduction); sum ms per watch; `share = ms / totalMs`; `wears` = events in window per watch. Unparseable `wornAt` skipped; zero events → empty summary.
+
+Tests (`tests/wearage.test.ts`, fixed `America/Los_Angeles`): one event two full days ago → `2×17h + today's partial`; switch mid-day splits correctly; switch at 23:30 → late watch `0.5h − 7h → 0`, earlier watch keeps its full day; `since` clipping; the 2026-11-01 fall-back 25-hour day still deducts exactly 7h; shares sum to 1 ± 1e-9; `localDayStart` round-trips across DST.
+
+### A2. `lib/wear.ts` additions — me
+- Factor `loadCanonicalWithImages()` out of `listWearWatches()` (canonical + hero-aware image + postUrl) and reuse it.
+- `getWearingNow(): Promise<WearingNow | null>` → `{ watch: { id, brand, model, imageUrl, thumbnailUrl, postUrl }, event: WearEvent }` from `getCurrentWear()`.
+- `getWearageData(now = new Date())` → `{ allTime, last30Days, watches (id → brand/model/images), config: { timeZone, sleepHours } }` using `WEAR_TIMEZONE` / `WEAR_SLEEP_HOURS` (validated: unknown zone → UTC with a `console.warn`; hours clamped 0..23).
+
+### A3. Public route `pages/api/wearing.ts` — sonnet
+`GET` only, **no token** (this is the public face, unlike `/api/wear/*`), `rateLimit` 100/min, CORS like `watch-stats.ts` → `200 { wearing: WearingNow | null }`. Tests: null when no events; populated after `recordWear`; 405.
+
+### A4. Config + docs — haiku
+`.env.example` + `docker-compose.yml` (`WEAR_TIMEZONE`, `WEAR_SLEEP_HOURS`), README (env vars, `/api/wearing`, `/wearage`, method footnote), root + frontend `CLAUDE.md` (env, routes, `lib/wearage.ts`). `ios-app/API.md` gets one line noting `/api/wearing` is public and outside the token contract. Trim shipped items from `TODO.md` in the final commit.
+
+---
+
+## Part B — Front-page card (`frontend/`) — sonnet
+
+- `components/WearingNow.tsx` + `styles/WearingNow.module.css`: renders nothing when null. One line in the Stats idiom: 28 px round thumbnail (`next/image`), `ON THE WRIST` label (0.6875rem, 0.18em tracking, muted), `Rolex Air King 126900` linking to `/post/<id>?ref=/`, `· since 8:12 AM` (today) or `· since Oct 3`, and a trailing `wearage →` link to `/wearage`. Time formatted after mount (same hydration-safety pattern as the post page). Theme-aware via existing CSS variables; hairline above it inside the header, keeping the bronze `::after` rule as the final gesture.
+- `pages/index.tsx`: `serverWearing` from `getWearingNow()` in `getServerSideProps` (try/catch → null); `fetchWearing()` added to the existing 5-minute interval; `<WearingNow>` rendered right after `<Stats>`.
+
+---
+
+## Part C — `/wearage` page (`frontend/`) — sonnet, after reading the dataviz skill
+
+- `pages/wearage.tsx` (SSR via `getWearageData`) + `styles/Wearage.module.css`. Shell mirrors `index.tsx` (top icon row, wordmark link home, page title "Wearage" in the Lato italic style, smaller).
+- Sections: numbers strip (`N days tracked · N wears · N watches worn`); **Share of wrist time** with an All time / Last 30 days toggle (both datasets SSR'd, client state): rows of thumbnail 40 px, brand/model, a bar on a hairline track, percentage to one decimal, sorted desc, zero-share watches collapsed into "N never logged"; **By brand** aggregated the same way; **Method** footnote in prose (credited until the next log; 7 h off at the end of each day; shares of awake wrist-time, not hours; time zone named).
+- Bars are plain CSS (no chart library). **Before writing them, read the `dataviz` skill**: text percentage always present, bar carries an accessible label, accent-on-hairline palette consistent in light and dark, no 3-D or gradients.
+
+---
+
+## Part D — iOS (`ios-app/`)
+
+### D1. App icon — me
+Art-deco mark, subtle: near-black field `#0c0c0c`, bronze `#c89456` thin geometry (stepped sunburst fan behind a circular dial outline, twelve index ticks, a stepped crown at 3 o'clock), inner hairlines in muted `#8a857d`, no text. Three SVG variants in `ios-app/design/`, rasterized to 1024-pt PNG previews by a committed `ios-app/design/render-icon.mjs` (node + the frontend's `sharp`). You pick; the winner becomes `Wrist/Assets.xcassets/AppIcon.appiconset/AppIcon.png` with `filename` set in `Contents.json`. Optional later: iOS 18 dark/tinted variants.
+
+### D2. Search — sonnet
+- WristCore `WatchSearch.filter(_ watches: [WearWatch], query: String) -> [WearWatch]`: case- and diacritic-insensitive; every whitespace-separated query token must match somewhere in `brand + " " + model`; empty query returns input unchanged; order preserved. Linux tests.
+- `PickerView`: a search row directly under the current card (magnifying glass, `TextField("Search watches")`, clear button, `.textInputAutocapitalization(.never)`, `.autocorrectionDisabled()`, `.submitLabel(.search)`, rounded `Color(.tertiarySystemFill)` background, identifier `picker.search`). List rows filter live; `ContentUnavailableView.search` when nothing matches; card stays.
+
+### D3. Hold-to-log — me
+Rows become plain content (not `Button`) with `.onLongPressGesture(minimumDuration: HoldToLog.duration, maximumDistance: 24, perform:, onPressingChanged:)`. Trailing slot: the `12×` count fades out while pressing and a bronze ring (`Circle().trim(from: 0, to: progress)`, 2.5 pt, rotated −90°) fills linearly over the duration; release early resets it. `perform` → `.success` haptic → `model.log`. `HoldToLog.duration = 0.65`. VoiceOver: `.accessibilityAction(named: "Log")` and hint "Hold to log". Undo bar unchanged. Row identifiers unchanged.
+
+### D4. History screen — sonnet
+Toolbar icon `clock.arrow.circlepath` (identifier `picker.history`) → `HistoryView`: recent events (limit 100) grouped by local day; row = thumbnail, watch name, time, source glyph; swipe-to-delete → `model.deleteEvent(id)` which calls `store.undo(eventID:)` (already handles sent and server events) then reloads. `AppModel` gains `recentEvents()` and `deleteEvent(_:)` using a client from a new `WristServices.makeClient() -> WearAPIClient?` (saved connection). Identifiers `history.list`, `history.row.<eventId>`.
+
+### D5. Tests — sonnet
+`PickerSmokeTests`: row uses `press(forDuration: 1.0)`; new test opens History and asserts the list exists; search test types "kur" and asserts only the Kurono row remains. `WristCoreTests/WatchSearchTests` on Linux.
+
+### D6. Docs
+`ios-app/README.md` checklist gains hold-to-log, search, History, icon. `ios-app/PLAN.md` appended with this plan.
+
+---
+
+## Part E — Fan-out and order
+
+**Wave 1 (parallel):** me → A1 + A2 (+ tests); sonnet `backend-wearing` → A3 + tests; sonnet `front-card` → B against the `WearingNow` shape in A2; sonnet `ios-search` → D2; haiku `config-docs` → A4 (except the TODO trim); me → D1 icon variants.
+**Gate 1:** `npm run typecheck && npm test` (Redis DB 15), `swift test` in Docker. Commit per unit.
+**Wave 2 (parallel):** sonnet `wearage-page` → C (told to read the dataviz skill file first); sonnet `ios-history` → D4; me → D3 hold-to-log.
+**Gate 2:** tests again; my read-through of every iOS file (no compiler here); sonnet `ios-tests` → D5; D6 docs; you pick the icon; wire it; trim `TODO.md`.
+
+Commits atomic on `ios-app` as before, no pushes. I do not rebuild the live frontend container.
+
+---
+
+## Verification
+
+**Here:**
+```bash
+cd frontend && npm run typecheck && npm test        # DB 15 only
+docker run --rm --user "$(id -u):$(id -g)" -e HOME=/tmp -v "$PWD/ios-app/WristCore":/src -w /src swift:6.0-jammy swift test
+```
+**Visual check of the site work here**, with your OK as part of this plan: start `npm run dev` (port 42420, which Caddy already exposes as `dev.ryanswatches.com`; SSR reads production Redis DB 0 read-only) and use the Playwright MCP to screenshot `/` (card) and `/wearage` in dark and light, then stop the server. Icon previews land as PNGs in `ios-app/design/` for you to open.
+
+**On your Mac:** `git pull && cd ios-app && xcodegen generate`, build; checklist: hold a row → ring fills → haptic + log; release early → nothing; search "kur" filters; History shows the wear, swipe deletes it and the picker count drops; icon on the Home Screen.
+
+**Deploy (you):** `docker compose up -d --build frontend` for the card, the page, and `/api/wearing`; optionally set `WEAR_TIMEZONE` / `WEAR_SLEEP_HOURS` if the defaults don't fit.

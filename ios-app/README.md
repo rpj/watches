@@ -70,7 +70,7 @@ Use Simulator > Features > Toggle Appearance to check both dark and light.
 
 1. Launch, complete Setup, paste the token.
 2. The watch list renders sorted most-worn first.
-3. Tap a row: "Wearing now" updates, a haptic fires, and the Undo bar appears.
+3. Press and hold a row (~0.65 s): the bronze ring fills, a haptic fires, "Wearing now" updates, and the Undo bar appears. A plain tap does nothing.
 4. Open Settings and enable the nudge at a time 1 minute out.
 5. Background or lock the app.
 6. The notification appears with 3 action buttons.
@@ -79,6 +79,21 @@ Use Simulator > Features > Toggle Appearance to check both dark and light.
 9. Tap a chip in the widget: both the widget and the app reflect it.
 10. Simulator > Features > turn the network off, then tap a row: a "1 unsent" pill shows.
 11. Turn the network back on: the pill clears.
+12. Type "kur" in the search row under the card: only the Kurono rows remain; clear it with the ⓧ.
+13. Tap the clock icon in the toolbar: History lists today's wears; swipe one left and delete it; the picker's count and "Wearing now" update.
+14. Home Screen: the app icon is the art-deco mark you installed (see "App icon" below).
+
+## App icon
+
+Three variants live in `design/` as SVG + 1024-pt PNG (`icon-a`, `icon-b`, `icon-c`, with 256-px `-preview.png` files). Regenerate or install one with the frontend's `sharp`:
+
+```bash
+cd ios-app/design
+node render-icon.mjs               # re-render all three
+node render-icon.mjs --install a   # copy variant a into Wrist/Assets.xcassets/AppIcon.appiconset
+```
+
+Then regenerate the project and rebuild. iOS masks the corners itself; the artwork is a full-bleed near-black square with bronze geometry.
 
 ## Server setup
 
