@@ -7,6 +7,8 @@ import { Post, getCustomUsers, PaginatedPosts, WatchStats, getWatchStats } from 
 import WatchCard from '../components/WatchCard';
 import Pagination from '../components/Pagination';
 import Stats from '../components/Stats';
+import WearingNowLine from '../components/WearingNow';
+import { WearingNow, getWearingNow } from '../lib/wear';
 import { useTheme } from '../contexts/ThemeContext';
 import styles from '../styles/Home.module.css';
 import Link from 'next/link';
@@ -17,6 +19,7 @@ interface HomeProps {
   serverSiteTitle: string | null;
   serverPrimaryHandle: string | null;
   serverStats: WatchStats;
+  serverWearing: WearingNow | null;
 }
 
 export default function Home({
@@ -25,6 +28,7 @@ export default function Home({
   serverSiteTitle,
   serverPrimaryHandle,
   serverStats,
+  serverWearing,
 }: HomeProps) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,6 +43,7 @@ export default function Home({
   const [siteTitle, setSiteTitle] = useState<string | null>(serverSiteTitle);
   const [primaryHandle, setPrimaryHandle] = useState<string | null>(serverPrimaryHandle);
   const [stats, setStats] = useState<WatchStats>(serverStats);
+  const [wearing, setWearing] = useState<WearingNow | null>(serverWearing);
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   const activeBrand = (router.query.brand as string | undefined) || null;
@@ -72,6 +77,7 @@ export default function Home({
       const interval = setInterval(() => {
         fetchPosts(currentPage, activeBrand);
         fetchStats();
+        fetchWearing();
       }, 5 * 60 * 1000);
       return () => clearInterval(interval);
     }
@@ -114,6 +120,18 @@ export default function Home({
       }
     } catch (err) {
       console.error('Error fetching watch stats:', err);
+    }
+  }
+
+  async function fetchWearing() {
+    try {
+      const response = await fetch('/api/wearing');
+      if (response.ok) {
+        const data = await response.json();
+        setWearing(data.wearing ?? null);
+      }
+    } catch (err) {
+      console.error('Error fetching wearing now:', err);
     }
   }
 
@@ -203,6 +221,7 @@ export default function Home({
             <Link href="/">{displayTitle}</Link>
           </h1>
           <Stats stats={stats} activeBrand={activeBrand} basePath="/" />
+          <WearingNowLine wearing={wearing} />
         </header>
 
         {loading && (
@@ -277,6 +296,13 @@ export async function getServerSideProps() {
     console.error('SSR getWatchStats failed:', e);
   }
 
+  let serverWearing: WearingNow | null = null;
+  try {
+    serverWearing = await getWearingNow();
+  } catch (e) {
+    console.error('SSR getWearingNow failed:', e);
+  }
+
   return {
     props: {
       serverHashtag: hashtag,
@@ -284,6 +310,7 @@ export async function getServerSideProps() {
       serverSiteTitle: siteTitle,
       serverPrimaryHandle: primaryHandle,
       serverStats,
+      serverWearing,
     },
   };
 }
