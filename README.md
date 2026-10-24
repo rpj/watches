@@ -554,7 +554,7 @@ Changes take effect on the next gallery refresh — no service restart required.
 
 ### On the site: "On the wrist" and `/wearage`
 
-The front page shows one line under the brand list with the watch currently on the wrist (public, read-only, fed by `GET /api/wearing`, refreshed every 5 minutes). `/wearage` breaks the history down by **share of awake wrist-time**, all-time and last 30 days, per watch and per brand.
+The front page shows one line under the brand list with the last watch logged ("Last on the wrist"; public, read-only, fed by `GET /api/wearing`, refreshed every 5 minutes; no timestamps and never the bare-wrist entry). `/wearage` breaks the history down by **share of wrist-time**, all-time and last 30 days, per watch and per brand, with each row linking to the watch's post or the brand's gallery filter.
 
 Taking a watch off is a log too: the app's "Nothing on" row (reserved `watchId` `none`) ends the current watch's credit so bare-wrist time is never attributed to anyone. Method: a watch is credited from the moment it is logged until the next log; at the end of every completed day (`WEAR_TIMEZONE`) `WEAR_SLEEP_HOURS` hours come off whichever watch is on the wrist; shares are of what remains. No hours are shown, only percentages. The math lives in `frontend/lib/wearage.ts` and is unit-tested.
 

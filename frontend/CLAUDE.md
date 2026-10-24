@@ -50,7 +50,7 @@ Public read side: `lib/wear.ts` also exports `getWearingNow()`, `getWearageData(
 - `/post/[id]` - Individual post pages where `[id]` is the extracted post ID + optional image index
 - `/[handle]/post/[id]` - User-scoped post pages
 - `/rss.xml` - RSS feed endpoint (server-generated XML, `?handle=` supported)
-- `/wearage` - Share of awake wrist-time per watch/brand (SSR from `lib/wearage.ts` + `lib/wear.ts` `getWearageData`)
+- `/wearage` - Share of wrist-time per watch/brand (SSR from `lib/wearage.ts` + `lib/wear.ts` `getWearageData`)
 
 API routes (all rate-limited, CORS-restricted to ryanswatches.com in production):
 - `/api/posts` - Posts with `?handle=`, `?brand=`, and `?paginate=true&page=&pageSize=` params
@@ -58,7 +58,7 @@ API routes (all rate-limited, CORS-restricted to ryanswatches.com in production)
 - `/api/custom-users` - All handles that have posted (from `handles:all`)
 - `/api/watch-stats` - Classifier aggregates (unique watches, brands, per-brand counts)
 - `/api/pricing?postId=` - Pricing widget data (eBay + manufacturer price)
-- `/api/wearing` - Public, read-only: the watch currently on the wrist (`{ wearing: WearingNow | null }`) for the front-page line
+- `/api/wearing` - Public, read-only: the last watch logged, no timestamp, bare-wrist entries skipped (`{ wearing: { watch } | null }`) for the front-page line
 
 ## Styling Approach
 

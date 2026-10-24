@@ -59,7 +59,7 @@ Swift mirrors these 1:1 (`WearSource`, `WearEvent`, `WearWatch`, `WatchesRespons
 
 ### The reserved `none` entry ("nothing on")
 
-`watchId: "none"` means the wrist is bare. It is accepted by `POST /api/wear/events` without being canonical, becomes `current` like any event, is debounced like any event, and **never appears in `watches`**. In the wearage math it ends the previous watch's credit and earns nothing itself (so no sleep deduction lands on a watch when the wrist is bare at midnight). The public `GET /api/wearing` reports it as `{ watch: null, event }`. Clients render it with their own placeholder (the app uses `WearWatch.nothing`).
+`watchId: "none"` means the wrist is bare. It is accepted by `POST /api/wear/events` without being canonical, becomes `current` like any event, is debounced like any event, and **never appears in `watches`**. In the wearage math it ends the previous watch's credit and earns nothing itself (so no sleep deduction lands on a watch when the wrist is bare at midnight). The public `GET /api/wearing` skips it and reports the last real watch as `{ wearing: { watch } }` (no event, no timestamp: it feeds a public page). Clients render it with their own placeholder (the app uses `WearWatch.nothing`).
 
 ## Ordering of `watches`
 

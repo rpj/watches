@@ -58,7 +58,7 @@ There is no lint script — this project intentionally does not use ESLint.
 
 ### Service Architecture
 - **Listener**: Polls Bluesky every ~5 minutes (batches of 100, max 20 batches/cycle) for posts with the configured hashtag, optionally restricted to `HANDLES_TO_WATCH`. Stores one Post entry per image in a unified Redis store, runs the watch classifier inline on each new post (shells out to `claude -p`; fail-soft if unavailable), and refreshes manufacturer product prices on a throttled cadence.
-- **Frontend**: Next.js pages router. `/` all posts (with the watch currently on the wrist), `/[handle]` per-user gallery with hero card, `/post/[id]` and `/[handle]/post/[id]` post pages with the pricing widget, `/rss.xml`, `/wearage` (wear-time shares). Server-rendered with 5-minute client auto-refresh, pagination (50/page), and `?brand=` filtering driven by classifier meta.
+- **Frontend**: Next.js pages router. `/` all posts (with the last watch on the wrist), `/[handle]` per-user gallery with hero card, `/post/[id]` and `/[handle]/post/[id]` post pages with the pricing widget, `/rss.xml`, `/wearage` (wear-time shares). Server-rendered with 5-minute client auto-refresh, pagination (50/page), and `?brand=` filtering driven by classifier meta.
 - **Redis**: Single source of truth — posts, per-handle indices, classifier output, overrides, widget caches, sessions. There is **no per-user prefix fanout**; that was the old design and has been removed.
 
 ### Key Data Structure

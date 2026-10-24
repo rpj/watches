@@ -9,7 +9,7 @@ import type { WearEvent } from './wear';
 export const NONE_WATCH_ID = 'none';
 
 /**
- * "Wearage": each watch's share of awake wrist-time.
+ * "Wearage": each watch's share of wrist-time.
  *
  * A watch is credited from the moment it is logged until the next log (the
  * latest log runs to `now`). At the end of every completed local day, up to
@@ -32,7 +32,7 @@ export interface WearageOptions {
 
 export interface WearageShare {
   watchId: string;
-  /** Awake wrist-time credited in the window. */
+  /** Wrist-time credited in the window (after the nightly deduction). */
   ms: number;
   /** ms / totalMs, 0 when totalMs is 0. */
   share: number;
