@@ -48,34 +48,38 @@ export default function ShareList({ title, rows, ariaLabel }: ShareListProps) {
                   title={`${row.name} · ${p}% · ${row.wears} wears · last ${row.lastWornAt ?? 'never'}`}
                 >
                   <td className={styles.watchCell}>
-                    {row.thumbnailUrl ? (
-                      <Image
-                        src={row.thumbnailUrl}
-                        alt=""
-                        width={40}
-                        height={40}
-                        className={styles.thumb}
-                      />
-                    ) : (
-                      <span className={styles.fallback} aria-hidden="true">
-                        {row.name.charAt(0).toUpperCase()}
+                    <div className={styles.watchInner}>
+                      {row.thumbnailUrl ? (
+                        <Image
+                          src={row.thumbnailUrl}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className={styles.thumb}
+                        />
+                      ) : (
+                        <span className={styles.fallback} aria-hidden="true">
+                          {row.name.charAt(0).toUpperCase()}
+                        </span>
+                      )}
+                      <span className={styles.nameBlock}>
+                        <span className={styles.name}>{row.name}</span>
+                        {row.sub && <span className={styles.sub}>{row.sub}</span>}
                       </span>
-                    )}
-                    <span className={styles.nameBlock}>
-                      <span className={styles.name}>{row.name}</span>
-                      {row.sub && <span className={styles.sub}>{row.sub}</span>}
-                    </span>
+                    </div>
                   </td>
                   <td className={styles.barCell}>
-                    <div className={styles.track}>
-                      <div
-                        className={styles.fill}
-                        style={{ width: `${row.share * 100}%` }}
-                        role="img"
-                        aria-label={`${row.name}: ${p}% of wrist time`}
-                      />
+                    <div className={styles.barInner}>
+                      <div className={styles.track}>
+                        <div
+                          className={styles.fill}
+                          style={{ width: `${row.share * 100}%` }}
+                          role="img"
+                          aria-label={`${row.name}: ${p}% of wrist time`}
+                        />
+                      </div>
+                      <span className={styles.value}>{p}%</span>
                     </div>
-                    <span className={styles.value}>{p}%</span>
                   </td>
                   <td className={styles.wearsCell}>{row.wears}</td>
                 </tr>
