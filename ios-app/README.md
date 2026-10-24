@@ -80,6 +80,7 @@ Use Simulator > Features > Toggle Appearance to check both dark and light.
 10. Simulator > Features > turn the network off, then tap a row: a "1 unsent" pill shows.
 11. Turn the network back on: the pill clears.
 12. Type "kur" in the search row under the card: only the Kurono rows remain; clear it with the ⓧ.
+12a. Hold the "Nothing on the wrist" row (just under the search box): the card shows "Nothing on", the Undo bar says "Took it off", and History lists it with a dashed ring.
 13. Tap the clock icon in the toolbar: History lists today's wears; swipe one left and delete it; the picker's count and "Wearing now" update.
 14. Home Screen: the app icon is the art-deco mark you installed (see "App icon" below).
 
