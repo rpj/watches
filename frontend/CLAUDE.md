@@ -41,6 +41,8 @@ The application centers around the `Post` type (defined in `lib/redis.ts`) which
 ### Wear API (`pages/api/wear/*`)
 Authenticated routes for the iOS app. `lib/wear-auth.ts` → `requireWearToken` (constant-time bearer check against `WEAR_API_TOKEN`, 503 when unset) runs before the shared rate limiter; `lib/wear.ts` holds the data layer and pure helpers (`compareWearWatches`, `validateWearEventInput`, `thumbnailUrlFor`). No CORS: native client only.
 
+Public read side: `lib/wear.ts` also exports `getWearingNow()`, `getWearageData()`, `loadCanonicalWithImages()`; `lib/wearage.ts` is the pure wearage math (Intl-based local days, nightly sleep deduction).
+
 ## Routing Structure
 
 - `/` - Main gallery, all posts (server-rendered with client-side refresh, paginated 50/page)
@@ -48,6 +50,7 @@ Authenticated routes for the iOS app. `lib/wear-auth.ts` → `requireWearToken` 
 - `/post/[id]` - Individual post pages where `[id]` is the extracted post ID + optional image index
 - `/[handle]/post/[id]` - User-scoped post pages
 - `/rss.xml` - RSS feed endpoint (server-generated XML, `?handle=` supported)
+- `/wearage` - Share of awake wrist-time per watch/brand (SSR from `lib/wearage.ts` + `lib/wear.ts` `getWearageData`)
 
 API routes (all rate-limited, CORS-restricted to ryanswatches.com in production):
 - `/api/posts` - Posts with `?handle=`, `?brand=`, and `?paginate=true&page=&pageSize=` params
@@ -55,6 +58,7 @@ API routes (all rate-limited, CORS-restricted to ryanswatches.com in production)
 - `/api/custom-users` - All handles that have posted (from `handles:all`)
 - `/api/watch-stats` - Classifier aggregates (unique watches, brands, per-brand counts)
 - `/api/pricing?postId=` - Pricing widget data (eBay + manufacturer price)
+- `/api/wearing` - Public, read-only: the watch currently on the wrist (`{ wearing: WearingNow | null }`) for the front-page line
 
 ## Styling Approach
 

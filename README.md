@@ -501,6 +501,8 @@ Always test-scan the final asset with a couple of phones before sending it to pr
 - `SITE_TITLE` - Human-readable wordmark for the gallery masthead (e.g. `Ryan's Watches`). Falls back to the hashtag itself when unset.
 - `WATCH_CLASSIFIER_MODEL` - Claude model the watch classifier uses (default: `sonnet`). Set to `haiku` for cheaper / noisier classification.
 - `WEAR_API_TOKEN` - Bearer token for the `/api/wear/*` endpoints used by the iOS app (see "Wear API & iOS app"). Unset = wear API disabled (503).
+- `WEAR_TIMEZONE` - IANA zone defining local days for the wearage page's nightly deduction (default `America/Los_Angeles`).
+- `WEAR_SLEEP_HOURS` - Hours deducted from the watch on the wrist at the end of each day (default `7`; `0` disables).
 - `DISABLE_AUTOUPDATER` - Set to `1` in the listener container so `claude` doesn't run the auto-update check on every invocation. Already set in `listener/Dockerfile`.
 - `PORT` - Frontend production server port (default: 3000). The dev server (`npm run dev`) runs on a hard-coded port 42420.
 
@@ -549,6 +551,12 @@ Changes take effect on the next gallery refresh — no service restart required.
 **Setup:** generate a token (`openssl rand -hex 32`), set `WEAR_API_TOKEN` in the deployment's `.env`, redeploy the frontend, then paste the same token into the app's setup screen. Leaving the variable unset disables the API entirely (every route returns 503).
 
 **Tests:** `cd frontend && npm test` runs the vitest suite. Integration tests use a real Redis but only logical DB 15 (`redis://localhost:6379/15`) and refuse to start against any other DB; set `WEAR_TEST_REDIS_URL` to point at a different host (keep the `/15`).
+
+### On the site: "On the wrist" and `/wearage`
+
+The front page shows one line under the brand list with the watch currently on the wrist (public, read-only, fed by `GET /api/wearing`, refreshed every 5 minutes). `/wearage` breaks the history down by **share of awake wrist-time**, all-time and last 30 days, per watch and per brand.
+
+Method: a watch is credited from the moment it is logged until the next log; at the end of every completed day (`WEAR_TIMEZONE`) `WEAR_SLEEP_HOURS` hours come off whichever watch is on the wrist; shares are of what remains. No hours are shown, only percentages. The math lives in `frontend/lib/wearage.ts` and is unit-tested.
 
 ## Data Structure
 
@@ -694,6 +702,7 @@ npm run dev
 - `GET /api/config` - Deployment config for the masthead: hashtag, site title, primary tracked handle
 - `GET /api/custom-users` - Sorted list of every handle that has posted (from `handles:all`)
 - `GET /api/watch-stats` - Classifier aggregates: unique-watch count, brand count, per-brand counts
+- `GET /api/wearing` - The watch currently on the wrist: `{ wearing: { watch, event } | null }`. Public, read-only; rate-limited.
 - `GET /api/pricing?postId=<basePostId>` - Pricing widget data: eBay listings summary + manufacturer price (24h cache)
 - `GET /rss.xml` - RSS feed (all posts); `?handle=` for a user-specific feed
 

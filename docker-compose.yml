@@ -32,5 +32,7 @@ services:
       - EBAY_ENV=${EBAY_ENV:-sandbox}
       # Wear API (iOS app). Unset = disabled.
       - WEAR_API_TOKEN=${WEAR_API_TOKEN}
+      - WEAR_TIMEZONE=${WEAR_TIMEZONE:-America/Los_Angeles}
+      - WEAR_SLEEP_HOURS=${WEAR_SLEEP_HOURS:-7}
     restart: unless-stopped
 

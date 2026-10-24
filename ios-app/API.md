@@ -27,6 +27,8 @@ Content: JSON only. Wrong method → `405 {"error":"Method not allowed"}`. Every
 
 No CORS headers are set: the only client is a native app.
 
+Not part of this contract: `GET /api/wearing` (the website's public "On the wrist" line) and the `/wearage` page read the same Redis keys without a token. They are read-only and rate-limited like the other public routes.
+
 ## Types
 
 ```ts

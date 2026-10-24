@@ -58,7 +58,7 @@ There is no lint script — this project intentionally does not use ESLint.
 
 ### Service Architecture
 - **Listener**: Polls Bluesky every ~5 minutes (batches of 100, max 20 batches/cycle) for posts with the configured hashtag, optionally restricted to `HANDLES_TO_WATCH`. Stores one Post entry per image in a unified Redis store, runs the watch classifier inline on each new post (shells out to `claude -p`; fail-soft if unavailable), and refreshes manufacturer product prices on a throttled cadence.
-- **Frontend**: Next.js pages router. `/` all posts, `/[handle]` per-user gallery with hero card, `/post/[id]` and `/[handle]/post/[id]` post pages with the pricing widget, `/rss.xml`. Server-rendered with 5-minute client auto-refresh, pagination (50/page), and `?brand=` filtering driven by classifier meta.
+- **Frontend**: Next.js pages router. `/` all posts (with the watch currently on the wrist), `/[handle]` per-user gallery with hero card, `/post/[id]` and `/[handle]/post/[id]` post pages with the pricing widget, `/rss.xml`, `/wearage` (wear-time shares). Server-rendered with 5-minute client auto-refresh, pagination (50/page), and `?brand=` filtering driven by classifier meta.
 - **Redis**: Single source of truth — posts, per-handle indices, classifier output, overrides, widget caches, sessions. There is **no per-user prefix fanout**; that was the old design and has been removed.
 
 ### Key Data Structure
@@ -103,6 +103,7 @@ Warm paper-and-ink minimalism: cream / near-black surfaces with a bronze accent 
 - `WATCH_CLASSIFIER_MODEL` - Claude model for the classifier (default: sonnet)
 - `EBAY_CLIENT_ID`, `EBAY_CLIENT_SECRET`, `EBAY_ENV` - eBay Browse API for the pricing widget (`EBAY_ENV`: production|sandbox, default sandbox)
 - `WEAR_API_TOKEN` - Bearer token for `/api/wear/*` (iOS app). Unset = wear API disabled (503). Read per-request, never logged.
+- `WEAR_TIMEZONE` / `WEAR_SLEEP_HOURS` - Local day zone (default America/Los_Angeles) and nightly deduction hours (default 7) for the wearage page; see README "On the site".
 - `PORT` - Frontend production port (default: 3000). The dev server is hard-coded to 42420.
 
 ## Docker Configuration
