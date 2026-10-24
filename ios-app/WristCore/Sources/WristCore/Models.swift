@@ -76,6 +76,28 @@ public struct WearWatch: Codable, Sendable, Equatable, Hashable, Identifiable {
     }
 }
 
+public extension WearWatch {
+    /// Reserved id meaning "no watch on the wrist" (see ios-app/API.md). The
+    /// server accepts it like any watch but never lists it.
+    static let noneID = "none"
+
+    /// Stand-in entry for the bare wrist, used by the picker row, History,
+    /// and the widget. Not a real watch: no image, no post.
+    static let nothing = WearWatch(
+        id: noneID,
+        brand: "Nothing",
+        model: "on the wrist",
+        imageUrl: nil,
+        thumbnailUrl: nil,
+        postUrl: "",
+        wearCount: 0,
+        lastWornAt: nil,
+        postCount: 0
+    )
+
+    var isNothing: Bool { id == Self.noneID }
+}
+
 public struct WatchesResponse: Codable, Sendable, Equatable {
     public let watches: [WearWatch]
     public let current: WearEvent?

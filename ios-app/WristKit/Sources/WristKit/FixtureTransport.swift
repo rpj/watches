@@ -43,16 +43,19 @@ public final class FixtureTransport: HTTPTransport, @unchecked Sendable {
             if let existing = events.first(where: { $0.id == input.id }) {
                 return json(200, RecordResponse(event: existing, created: false))
             }
-            guard let index = watches.firstIndex(where: { $0.id == input.watchId }) else {
+            let index = watches.firstIndex(where: { $0.id == input.watchId })
+            guard index != nil || input.watchId == WearWatch.noneID else {
                 return json(400, APIErrorBody(error: "Unknown watchId"))
             }
             let stored = WearEvent(id: input.id, watchId: input.watchId, wornAt: input.wornAt, source: input.source,
                                    recordedAt: WearDates.string(from: Date(), timeZone: TimeZone(identifier: "UTC")!))
             events.append(stored)
-            let w = watches[index]
-            watches[index] = WearWatch(id: w.id, brand: w.brand, model: w.model, imageUrl: w.imageUrl, thumbnailUrl: w.thumbnailUrl,
-                                       postUrl: w.postUrl, wearCount: w.wearCount + 1,
-                                       lastWornAt: later(w.lastWornAt, stored.wornAt), postCount: w.postCount)
+            if let index {
+                let w = watches[index]
+                watches[index] = WearWatch(id: w.id, brand: w.brand, model: w.model, imageUrl: w.imageUrl, thumbnailUrl: w.thumbnailUrl,
+                                           postUrl: w.postUrl, wearCount: w.wearCount + 1,
+                                           lastWornAt: later(w.lastWornAt, stored.wornAt), postCount: w.postCount)
+            }
             return json(201, RecordResponse(event: stored, created: true))
         case ("DELETE", _) where path.hasPrefix("/api/wear/events/"):
             let id = String(path.dropFirst("/api/wear/events/".count))

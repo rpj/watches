@@ -7,9 +7,16 @@ struct CurrentWatchCard: View {
     let since: String?
     let pendingCount: Int
     let errorText: String?
+    /// The latest event is the reserved "nothing on" entry (bare wrist).
+    var isNothingOn: Bool = false
+
+    private var title: String {
+        if let watch { return watch.displayName }
+        return isNothingOn ? "Nothing on" : "Nothing logged yet"
+    }
 
     private var subtitle: String {
-        guard let since, let date = WearDates.parse(since) else { return "Tap a watch below." }
+        guard let since, let date = WearDates.parse(since) else { return "Hold a watch below to log it." }
         if Calendar.autoupdatingCurrent.isDateInToday(date) {
             return "since " + date.formatted(date: .omitted, time: .shortened)
         }
@@ -19,13 +26,13 @@ struct CurrentWatchCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 14) {
-                WatchThumbnail(watch, size: 88)
+                WatchThumbnail(isNothingOn ? .nothing : watch, size: 88)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("WEARING NOW")
                         .font(.caption)
                         .tracking(1.2)
                         .foregroundStyle(.secondary)
-                    Text(watch?.displayName ?? "Nothing logged yet")
+                    Text(title)
                         .font(.title3.weight(.semibold))
                         .lineLimit(2)
                         .accessibilityIdentifier("picker.currentTitle")

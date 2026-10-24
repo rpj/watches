@@ -16,16 +16,33 @@ struct WatchThumbnail: View {
     }
 
     var body: some View {
-        AsyncImage(url: watch?.thumbnailUrl.flatMap(URL.init(string:))) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().scaledToFill()
-            default:
-                monogram
+        Group {
+            if watch?.isNothing == true {
+                bareWrist
+            } else {
+                AsyncImage(url: watch?.thumbnailUrl.flatMap(URL.init(string:))) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        monogram
+                    }
+                }
             }
         }
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: size * 0.18))
+    }
+
+    /// The reserved "nothing on" entry: a dashed ring instead of a photo.
+    private var bareWrist: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.18)
+                .fill(Color.secondary.opacity(0.08))
+            Image(systemName: "circle.dashed")
+                .font(.system(size: size * 0.42, weight: .light))
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var monogram: some View {

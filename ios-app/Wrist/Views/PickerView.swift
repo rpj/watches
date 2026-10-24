@@ -24,7 +24,8 @@ struct PickerView: View {
                 watch: model.currentWatch,
                 since: model.state.current?.wornAt,
                 pendingCount: model.state.pendingCount,
-                errorText: errorText
+                errorText: errorText,
+                isNothingOn: model.isNothingOn
             )
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
@@ -32,6 +33,14 @@ struct PickerView: View {
             SearchRow(query: $query)
                 .listRowSeparator(.hidden)
                 .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+
+            if query.isEmpty && model.state.isLoaded && !model.state.watches.isEmpty {
+                // Taking a watch off is a log too: it ends the current watch's wrist time.
+                HoldToLogRow(watch: .nothing, isCurrent: model.isNothingOn) {
+                    Task { await model.log(.nothing) }
+                }
+                .accessibilityIdentifier("picker.row.none")
+            }
 
             if !model.state.isLoaded {
                 ContentUnavailableView("Loading your watches", systemImage: "clock")
@@ -90,9 +99,11 @@ struct PickerView: View {
     }
 
     private func undoBar(for event: NewWearEvent) -> some View {
-        let name = model.state.watches.first { $0.id == event.watchId }?.displayName ?? "watch"
+        let text = event.watchId == WearWatch.noneID
+            ? "Took it off"
+            : "Logged \(model.watchName(for: event.watchId))"
         return HStack {
-            Text("Logged \(name)").lineLimit(1)
+            Text(text).lineLimit(1)
             Spacer()
             Button("Undo") { Task { await model.undoLast() } }
                 .fontWeight(.semibold)

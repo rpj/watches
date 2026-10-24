@@ -33,10 +33,11 @@ struct WatchRow: View {
     /// The wear count, replaced by a filling ring while the row is held.
     private var trailingSlot: some View {
         ZStack {
+            // The bare-wrist entry has no count worth showing.
             Text("\(watch.wearCount)×")
                 .font(.callout.monospacedDigit())
                 .foregroundStyle(.secondary)
-                .opacity(pressing ? 0 : 1)
+                .opacity(pressing || watch.isNothing ? 0 : 1)
             ZStack {
                 Circle()
                     .stroke(Color.accentColor.opacity(0.2), lineWidth: 2.5)

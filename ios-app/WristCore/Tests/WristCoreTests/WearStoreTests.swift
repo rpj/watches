@@ -406,6 +406,24 @@ final class WearStoreTests: XCTestCase {
         XCTAssertEqual(state.watches[1].wearCount, 0)
     }
 
+    // MARK: - Bare wrist
+
+    func testLoggingNothingBecomesCurrentWithoutTouchingCounts() async throws {
+        let transport = MockTransport()
+        transport.enqueue(watchesJSON(baseWatches, current: baseCurrent))
+        let store = makeStore(transport: transport)
+        await store.refresh()
+        transport.enqueue(recordJSON(NewWearEvent(id: "evt-0001", watchId: WearWatch.noneID, wornAt: "", source: .app)))
+
+        let (event, state) = await store.logWear(watchID: WearWatch.noneID, source: .app)
+
+        XCTAssertEqual(event?.watchId, WearWatch.noneID)
+        XCTAssertEqual(state.current?.watchId, WearWatch.noneID)
+        XCTAssertEqual(state.watches, baseWatches, "the bare-wrist entry is never listed and bumps nothing")
+        XCTAssertTrue(WearWatch.nothing.isNothing)
+        XCTAssertFalse(baseWatches[0].isNothing)
+    }
+
     // MARK: - Observation and policy
 
     func testUpdatesStreamEmitsCurrentThenChanges() async {

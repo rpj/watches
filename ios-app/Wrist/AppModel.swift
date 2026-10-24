@@ -64,6 +64,11 @@ final class AppModel {
         state.watches.first { $0.id == state.current?.watchId }
     }
 
+    /// True when the latest event is the reserved "nothing on" entry.
+    var isNothingOn: Bool {
+        state.current?.watchId == WearWatch.noneID
+    }
+
     var isLoggedToday: Bool {
         NudgeSchedule.isLoggedToday(latestWornAt: state.current?.wornAt, now: Date(), calendar: .autoupdatingCurrent)
     }
@@ -221,11 +226,13 @@ final class AppModel {
 
     /// Name for a watch id, falling back to the id.
     func watchName(for id: String) -> String {
-        watch(for: id)?.displayName ?? id
+        if id == WearWatch.noneID { return "Nothing on" }
+        return watch(for: id)?.displayName ?? id
     }
 
     func watch(for id: String) -> WearWatch? {
-        state.watches.first { $0.id == id }
+        if id == WearWatch.noneID { return .nothing }
+        return state.watches.first { $0.id == id }
     }
 
     // MARK: - Nudge

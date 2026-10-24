@@ -57,6 +57,11 @@ struct TopWatchesView: View {
         entry.state.watches.first { $0.id == entry.state.current?.watchId }
     }
 
+    /// The latest event is the reserved "nothing on" entry.
+    private var isNothingOn: Bool {
+        entry.state.current?.watchId == WearWatch.noneID
+    }
+
     /// Most-worn three, including the current watch: on a new day re-logging
     /// it is a real wear, and inside the debounce window the tap is a no-op.
     private var chips: [WearWatch] {
@@ -103,10 +108,10 @@ struct TopWatchesView: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 3) {
-                Image(systemName: "clock")
+                Image(systemName: isNothingOn ? "circle.dashed" : "clock")
                     .font(.title3)
                     .foregroundStyle(.secondary)
-                Text("Nothing logged yet")
+                Text(isNothingOn ? "Nothing on" : "Nothing logged yet")
                     .font(.footnote.weight(.semibold))
                 Text("Tap to open Wrist")
                     .font(.caption)
