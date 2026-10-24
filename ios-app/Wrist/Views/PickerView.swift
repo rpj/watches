@@ -6,6 +6,11 @@ import WristKit
 /// The whole app: current-watch card plus every watch, most-worn first.
 struct PickerView: View {
     @Environment(AppModel.self) private var model
+    @State private var query = ""
+
+    private var visibleWatches: [WearWatch] {
+        WatchSearch.filter(model.state.watches, query: query)
+    }
 
     private var errorText: String? {
         let state = model.state
@@ -24,6 +29,10 @@ struct PickerView: View {
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
 
+            SearchRow(query: $query)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 8, trailing: 16))
+
             if !model.state.isLoaded {
                 ContentUnavailableView("Loading your watches", systemImage: "clock")
                     .listRowSeparator(.hidden)
@@ -34,9 +43,12 @@ struct PickerView: View {
                     description: Text("Classify some posts on the gallery first.")
                 )
                 .listRowSeparator(.hidden)
+            } else if !query.isEmpty && visibleWatches.isEmpty {
+                ContentUnavailableView.search(text: query)
+                    .listRowSeparator(.hidden)
             }
 
-            ForEach(model.state.watches) { watch in
+            ForEach(visibleWatches) { watch in
                 Button {
                     UINotificationFeedbackGenerator().notificationOccurred(.success)
                     Task { await model.log(watch) }
