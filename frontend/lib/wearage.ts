@@ -1,6 +1,14 @@
 import type { WearEvent } from './wear';
 
 /**
+ * Reserved watchId meaning "no watch on the wrist". Logging it ends the
+ * previous watch's credit without starting anyone else's. Never appears in
+ * the watch list. Defined here (the pure module) so lib/wear.ts can re-export
+ * it without a circular import.
+ */
+export const NONE_WATCH_ID = 'none';
+
+/**
  * "Wearage": each watch's share of awake wrist-time.
  *
  * A watch is credited from the moment it is logged until the next log (the
@@ -136,8 +144,9 @@ export function computeWearage(events: WearEvent[], opts: WearageOptions): Weara
   for (let i = 0; i < timeline.length; i++) {
     const { e, t } = timeline[i];
     const end = i + 1 < timeline.length ? timeline[i + 1].t : nowMs;
+    const bare = e.watchId === NONE_WATCH_ID;
 
-    if (t >= sinceMs) {
+    if (t >= sinceMs && !bare) {
       wearsByWatch.set(e.watchId, (wearsByWatch.get(e.watchId) ?? 0) + 1);
       const prev = lastByWatch.get(e.watchId);
       if (!prev || t >= prev.t) lastByWatch.set(e.watchId, { t, raw: e.wornAt });
@@ -147,6 +156,9 @@ export function computeWearage(events: WearEvent[], opts: WearageOptions): Weara
     const eEnd = Math.min(end, nowMs);
     if (eEnd <= s) continue;
     if (trackingStart === null || s < trackingStart) trackingStart = s;
+    // A bare-wrist interval still ends the previous watch's credit (handled by
+    // `end` above) but earns nothing itself, and there is nothing to deduct.
+    if (bare) continue;
 
     let dayStart = localDayStart(s, timeZone);
     while (dayStart < eEnd) {

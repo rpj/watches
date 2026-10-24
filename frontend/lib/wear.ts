@@ -1,7 +1,9 @@
 import { getRedisClient, applyHeroOverrides } from './redis';
 import type { Post, WatchMeta, CanonicalEntry } from './redis';
 import { groupPostsByBaseUri } from './utils';
-import { computeWearage, type WearageSummary } from './wearage';
+import { computeWearage, NONE_WATCH_ID, type WearageSummary } from './wearage';
+
+export { NONE_WATCH_ID };
 
 export const WEAR_EVENTS_KEY = '__doodles:wear-events';
 export const WEAR_TIMELINE_KEY = '__doodles:wear-timeline';
@@ -282,14 +284,20 @@ export async function listWearWatches(): Promise<{ watches: WearWatch[]; current
 // ---------------------------------------------------------------------------
 
 export interface WearingNow {
-  watch: WatchInfo;
+  /** null when the latest event is the reserved "nothing on" entry. */
+  watch: WatchInfo | null;
   event: WearEvent;
 }
 
-/** The watch on the wrist right now, with its image and gallery link, or null. */
+/**
+ * The watch on the wrist right now, with its image and gallery link; `watch`
+ * is null for a bare wrist. Null overall when nothing was ever logged (or the
+ * latest event points at a watch no longer in the canonical list).
+ */
 export async function getWearingNow(): Promise<WearingNow | null> {
   const current = await getCurrentWear();
   if (!current) return null;
+  if (current.watchId === NONE_WATCH_ID) return { watch: null, event: current };
   const info = (await loadCanonicalWithImages()).find(w => w.id === current.watchId);
   if (!info) return null;
   const { canonicalIndex: _ignored, ...watch } = info;
@@ -377,9 +385,11 @@ export async function recordWear(
 ): Promise<{ ok: true; event: WearEvent; created: boolean } | { ok: false; error: string }> {
   const client = getRedisClient();
 
-  const canonical = parseCanonical(await client.lrange(WATCH_CANONICAL_KEY, 0, -1));
-  if (!canonical.some(c => c.post_id === input.watchId)) {
-    return { ok: false, error: 'Unknown watchId' };
+  if (input.watchId !== NONE_WATCH_ID) {
+    const canonical = parseCanonical(await client.lrange(WATCH_CANONICAL_KEY, 0, -1));
+    if (!canonical.some(c => c.post_id === input.watchId)) {
+      return { ok: false, error: 'Unknown watchId' };
+    }
   }
 
   // Retry of an id we already hold: answer with what was stored.

@@ -21,8 +21,9 @@ export default function WearingNow({ wearing }: WearingNowProps) {
   }
 
   const { watch, event } = wearing;
-  const thumb = watch.thumbnailUrl ?? watch.imageUrl;
-  const name = `${watch.brand} ${watch.model}`.trim();
+  // `watch` is null for the reserved "nothing on" entry: a bare wrist.
+  const thumb = watch ? watch.thumbnailUrl ?? watch.imageUrl : null;
+  const name = watch ? `${watch.brand} ${watch.model}`.trim() : 'Nothing right now';
 
   let since = '';
   if (mounted) {
@@ -45,16 +46,20 @@ export default function WearingNow({ wearing }: WearingNowProps) {
         />
       ) : (
         <span className={styles.fallback} aria-label={name} role="img">
-          {watch.brand.charAt(0).toUpperCase()}
+          {watch ? watch.brand.charAt(0).toUpperCase() : '–'}
         </span>
       )}
       <span className={styles.label}>On the wrist</span>
-      <Link
-        href={`/post/${encodeURIComponent(watch.id)}?ref=${encodeURIComponent('/')}`}
-        className={styles.name}
-      >
-        {name}
-      </Link>
+      {watch ? (
+        <Link
+          href={`/post/${encodeURIComponent(watch.id)}?ref=${encodeURIComponent('/')}`}
+          className={styles.name}
+        >
+          {name}
+        </Link>
+      ) : (
+        <span className={styles.name}>{name}</span>
+      )}
       {since && <span className={styles.since}>&middot; since {since}</span>}
       <Link href="/wearage" className={styles.more}>
         wearage &rarr;

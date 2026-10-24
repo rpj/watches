@@ -36,7 +36,7 @@ type WearSource = 'app' | 'notification' | 'widget' | 'shortcut';
 
 interface WearEvent {
   id: string;          // client-generated idempotency key, /^[A-Za-z0-9-]{8,64}$/ (UUID v4 recommended)
-  watchId: string;     // canonical post_id, e.g. "3m2uvdvq7622g"
+  watchId: string;     // canonical post_id, e.g. "3m2uvdvq7622g", or the reserved "none" (bare wrist, see below)
   wornAt: string;      // ISO 8601 with offset, set by the client at tap time, e.g. "2026-10-04T08:12:31-07:00"
   source: WearSource;
   recordedAt: string;  // server time, ISO 8601 UTC with milliseconds, e.g. "2026-10-04T15:12:32.418Z"
@@ -56,6 +56,10 @@ interface WearWatch {
 ```
 
 Swift mirrors these 1:1 (`WearSource`, `WearEvent`, `WearWatch`, `WatchesResponse`, `EventsResponse`, `RecordResponse`) with the same JSON keys. The Swift date decoder must accept both offset form (`-07:00`) and `Z`, with or without fractional seconds. Dates are kept as `String` on the wire type and parsed on demand.
+
+### The reserved `none` entry ("nothing on")
+
+`watchId: "none"` means the wrist is bare. It is accepted by `POST /api/wear/events` without being canonical, becomes `current` like any event, is debounced like any event, and **never appears in `watches`**. In the wearage math it ends the previous watch's credit and earns nothing itself (so no sleep deduction lands on a watch when the wrist is bare at midnight). The public `GET /api/wearing` reports it as `{ watch: null, event }`. Clients render it with their own placeholder (the app uses `WearWatch.nothing`).
 
 ## Ordering of `watches`
 
