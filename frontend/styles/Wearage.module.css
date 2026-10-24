@@ -1,0 +1,362 @@
+.pageTitle {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+}
+
+.kicker {
+  margin: 1.25rem 0 0;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.nav {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.content {
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* Window toggle */
+.toggleRow {
+  display: flex;
+  justify-content: center;
+  margin-bottom: clamp(2.5rem, 6vw, 4rem);
+}
+
+.toggle {
+  display: inline-flex;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  padding: 0.25rem;
+  gap: 0.25rem;
+}
+
+.toggleButton {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.toggleButton::after {
+  content: '';
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 0.3rem;
+  height: 1px;
+  background: transparent;
+  transition: background 0.2s ease;
+}
+
+.toggleButton:hover {
+  color: var(--accent-color);
+}
+
+.toggleButton.active {
+  color: var(--accent-color);
+}
+
+.toggleButton.active::after {
+  background: var(--accent-color);
+}
+
+.toggleButton:focus-visible {
+  outline: 1px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Hero figure */
+.hero {
+  text-align: center;
+  margin-bottom: clamp(2rem, 5vw, 3rem);
+}
+
+.heroFigure {
+  font-family: 'Schibsted Grotesk', system-ui, sans-serif;
+  font-size: clamp(3rem, 9vw, 5.5rem);
+  font-weight: 600;
+  font-style: normal;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.heroName {
+  margin: 1rem 0 0;
+  font-size: 1.0625rem;
+  color: var(--text-color);
+}
+
+.heroCaption {
+  margin: 0.375rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+/* Numbers strip */
+.numbers {
+  text-align: center;
+  margin-bottom: clamp(3rem, 7vw, 5rem);
+}
+
+.numbers > span {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.25rem 0.875rem;
+  align-items: baseline;
+}
+
+.numbers strong {
+  color: var(--text-color);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  font-size: 0.875rem;
+  margin-right: 0.25rem;
+  font-feature-settings: 'tnum';
+}
+
+.dot {
+  color: var(--hairline-strong);
+}
+
+/* Share list */
+.shareList {
+  margin-bottom: clamp(3rem, 7vw, 5rem);
+}
+
+.listTitle {
+  margin: 0 0 1rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.row {
+  border-top: 1px solid var(--hairline);
+}
+
+.row > td {
+  padding: 0.75rem 0;
+  vertical-align: middle;
+}
+
+.watchCell {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.thumb,
+.fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--hairline);
+  flex-shrink: 0;
+}
+
+.thumb {
+  object-fit: cover;
+}
+
+.fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--accent-color);
+}
+
+.nameBlock {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  font-size: 0.9375rem;
+  color: var(--text-color);
+}
+
+.sub {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.barCell {
+  width: 45%;
+}
+
+.barCell {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+
+.track {
+  flex: 1;
+  height: 10px;
+  background: var(--hairline);
+  border-radius: 0;
+}
+
+.fill {
+  height: 100%;
+  min-width: 2px;
+  background: var(--accent-color);
+  border-radius: 0 4px 4px 0;
+}
+
+.value {
+  flex: 0 0 3.5rem;
+  text-align: right;
+  font-size: 0.875rem;
+  color: var(--text-color);
+  font-feature-settings: 'tnum';
+}
+
+.wearsCell {
+  width: 3.5rem;
+  text-align: right;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  margin: 0.75rem 0 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.collapsed {
+  margin: 0.75rem 0 0;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hairline);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+/* Method */
+.method {
+  max-width: 640px;
+  margin: 0 auto clamp(2.5rem, 6vw, 4rem);
+  text-align: center;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.method p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.7;
+  color: var(--text-muted);
+}
+
+.updated {
+  margin-top: 1rem !important;
+  min-height: 1.2em;
+  font-size: 0.6875rem !important;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.footer {
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .nav {
+    margin-top: 0.5rem;
+  }
+
+  .table,
+  .table tbody {
+    display: block;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'watch wears'
+      'bar bar';
+    column-gap: 0.75rem;
+    align-items: center;
+    padding: 0.75rem 0;
+  }
+
+  .row > td {
+    padding: 0;
+  }
+
+  .watchCell {
+    grid-area: watch;
+    gap: 0.625rem;
+  }
+
+  .wearsCell {
+    grid-area: wears;
+    width: auto;
+  }
+
+  .barCell {
+    grid-area: bar;
+    width: auto;
+    margin-top: 0.5rem;
+  }
+
+  .thumb,
+  .fallback {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Breathing room between the two share lists */
+.gap {
+  height: clamp(3rem, 7vw, 5rem);
+}
