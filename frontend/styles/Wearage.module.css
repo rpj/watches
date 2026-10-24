@@ -226,6 +226,19 @@
   color: var(--text-color);
 }
 
+/* Names that link (watch → post page, brand → gallery filter) */
+.nameLink {
+  border-bottom: 1px solid transparent;
+  padding-bottom: 1px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.nameLink:hover,
+.nameLink:focus-visible {
+  color: var(--accent-color);
+  border-bottom-color: var(--accent-color);
+}
+
 .sub {
   font-size: 0.8125rem;
   color: var(--text-muted);
@@ -286,28 +299,6 @@
 }
 
 /* Method */
-.method {
-  max-width: 640px;
-  margin: 0 auto clamp(2.5rem, 6vw, 4rem);
-  text-align: center;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--hairline);
-}
-
-.method p {
-  margin: 0;
-  font-size: 0.875rem;
-  line-height: 1.7;
-  color: var(--text-muted);
-}
-
-.updated {
-  margin-top: 1rem !important;
-  min-height: 1.2em;
-  font-size: 0.6875rem !important;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
 
 .footer {
   text-align: center;

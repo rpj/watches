@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import { format } from 'date-fns';
 import ShareList, { ShareRow } from '../components/ShareList';
 import { getWearageData } from '../lib/wear';
 import type { WearageData, WatchInfo } from '../lib/wear';
@@ -40,10 +39,12 @@ function buildWatchRows(summary: WearageSummary, watches: Record<string, WatchIn
     .map(s => ({
       id: s.watchId,
       name: watchName(watches[s.watchId], s.watchId),
+      href: watches[s.watchId]
+        ? `/post/${encodeURIComponent(s.watchId)}?ref=${encodeURIComponent('/wearage')}`
+        : undefined,
       thumbnailUrl: thumbOf(watches[s.watchId]),
       share: s.share,
       wears: s.wears,
-      lastWornAt: s.lastWornAt,
     }));
 }
 
@@ -51,10 +52,10 @@ function buildBrandRows(summary: WearageSummary, watches: Record<string, WatchIn
   interface Acc {
     ms: number;
     wears: number;
-    lastWornAt: string | null;
     watchCount: number;
     topMs: number;
     thumbnailUrl: string | null;
+    known: boolean;
   }
   const byBrand = new Map<string, Acc>();
   for (const s of summary.shares) {
@@ -63,13 +64,10 @@ function buildBrandRows(summary: WearageSummary, watches: Record<string, WatchIn
     const brand = info?.brand || 'Unknown';
     const acc =
       byBrand.get(brand) ??
-      { ms: 0, wears: 0, lastWornAt: null, watchCount: 0, topMs: -1, thumbnailUrl: null };
+      { ms: 0, wears: 0, watchCount: 0, topMs: -1, thumbnailUrl: null, known: !!info };
     acc.ms += s.ms;
     acc.wears += s.wears;
     acc.watchCount += 1;
-    if (s.lastWornAt && (!acc.lastWornAt || s.lastWornAt > acc.lastWornAt)) {
-      acc.lastWornAt = s.lastWornAt;
-    }
     if (s.ms > acc.topMs) {
       acc.topMs = s.ms;
       acc.thumbnailUrl = thumbOf(info);
@@ -82,21 +80,17 @@ function buildBrandRows(summary: WearageSummary, watches: Record<string, WatchIn
       id: brand,
       name: brand,
       sub: `${acc.watchCount} ${acc.watchCount === 1 ? 'watch' : 'watches'}`,
+      // The gallery's brand filter, same link the Stats strip uses.
+      href: acc.known ? `/?brand=${encodeURIComponent(brand)}` : undefined,
       thumbnailUrl: acc.thumbnailUrl,
       share: summary.totalMs > 0 ? acc.ms / summary.totalMs : 0,
       wears: acc.wears,
-      lastWornAt: acc.lastWornAt,
     }));
 }
 
 export default function Wearage({ siteTitle, data }: WearageProps) {
   const { theme, toggleTheme } = useTheme();
   const [windowKey, setWindowKey] = useState<WindowKey>('all');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const summary = data ? (windowKey === 'all' ? data.allTime : data.last30Days) : null;
 
@@ -115,11 +109,6 @@ export default function Wearage({ siteTitle, data }: WearageProps) {
   const unworn = Math.max(0, canonicalCount - watchRows.length);
   const top = summary && summary.shares.length > 0 && summary.shares[0].ms > 0 ? summary.shares[0] : null;
 
-  let updated = '';
-  if (mounted && data) {
-    const d = new Date(data.generatedAt);
-    if (!Number.isNaN(d.getTime())) updated = format(d, 'MMM d, h:mm a');
-  }
 
   return (
     <>
@@ -206,7 +195,7 @@ export default function Wearage({ siteTitle, data }: WearageProps) {
               </p>
               {top && (
                 <p className={styles.heroCaption}>
-                  of awake wrist-time · {WINDOW_LABELS[windowKey]}
+                  of wrist-time · {WINDOW_LABELS[windowKey]}
                 </p>
               )}
             </section>
@@ -235,16 +224,6 @@ export default function Wearage({ siteTitle, data }: WearageProps) {
             <div className={styles.gap} aria-hidden="true" />
 
             <ShareList title="By brand" ariaLabel="Share of wrist time by brand" rows={brandRows} />
-
-            <footer className={styles.method}>
-              <p>
-                Each watch is credited from the moment it&rsquo;s logged until the next log. At the
-                end of every day ({data.config.timeZone}) {data.config.sleepHours} hours come off
-                whichever watch is on the wrist, since nobody wears a watch to bed. Shares are of
-                what remains: awake wrist-time, never hours.
-              </p>
-              <p className={styles.updated}>{updated && `Updated ${updated}`}</p>
-            </footer>
 
             <div className={styles.footer}>
               <Link href="/" className={homeStyles.userLink}>

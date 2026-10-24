@@ -15,7 +15,7 @@ describe('GET /api/wearing', () => {
     expect(r.json()).toEqual({ wearing: null });
   });
 
-  it('returns the current watch and event', async () => {
+  it('returns the last watch logged, without the event', async () => {
     await recordWear(EVENTS[1]);
     const r = await callApi(handler, { token: null });
     expect(r.status).toBe(200);
@@ -28,8 +28,6 @@ describe('GET /api/wearing', () => {
       thumbnailUrl: IMAGE.kurono.replace('/feed_fullsize/', '/feed_thumbnail/'),
       postUrl: expect.stringContaining('/post/' + WATCH_KURONO),
     });
-    expect(wearing.event.id).toBe(EVENTS[1].id);
-    expect(typeof wearing.event.recordedAt).toBe('string');
   });
 
   it('picks the latest wornAt, not the last inserted', async () => {
@@ -38,7 +36,7 @@ describe('GET /api/wearing', () => {
     }
     const r = await callApi(handler, { token: null });
     expect(r.status).toBe(200);
-    expect(r.json().wearing.event.id).toBe(EVENTS[1].id);
+    expect(r.json().wearing.watch.id).toBe(WATCH_KURONO);
   });
 
   it('rejects non-GET methods with 405', async () => {

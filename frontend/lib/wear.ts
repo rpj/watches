@@ -284,24 +284,33 @@ export async function listWearWatches(): Promise<{ watches: WearWatch[]; current
 // ---------------------------------------------------------------------------
 
 export interface WearingNow {
-  /** null when the latest event is the reserved "nothing on" entry. */
-  watch: WatchInfo | null;
-  event: WearEvent;
+  watch: WatchInfo;
 }
 
+/** How many newest events to scan past bare-wrist entries for the last real watch. */
+const WEARING_NOW_SCAN = 50;
+
 /**
- * The watch on the wrist right now, with its image and gallery link; `watch`
- * is null for a bare wrist. Null overall when nothing was ever logged (or the
- * latest event points at a watch no longer in the canonical list).
+ * The last watch that was logged, with its image and gallery link. Bare-wrist
+ * entries are skipped, so the site never shows "nothing". Deliberately carries
+ * no timestamp: this feeds a public page. Null when no watch was ever logged.
  */
 export async function getWearingNow(): Promise<WearingNow | null> {
-  const current = await getCurrentWear();
-  if (!current) return null;
-  if (current.watchId === NONE_WATCH_ID) return { watch: null, event: current };
-  const info = (await loadCanonicalWithImages()).find(w => w.id === current.watchId);
-  if (!info) return null;
-  const { canonicalIndex: _ignored, ...watch } = info;
-  return { watch, event: current };
+  const client = getRedisClient();
+  const ids = await client.zrevrange(WEAR_TIMELINE_KEY, 0, WEARING_NOW_SCAN - 1);
+  if (ids.length === 0) return null;
+  const raws = await client.hmget(WEAR_EVENTS_KEY, ...ids);
+  let canonical: IndexedWatchInfo[] | null = null;
+  for (const raw of raws) {
+    const ev = parseJson<WearEvent>(raw);
+    if (!ev || typeof ev.watchId !== 'string' || ev.watchId === NONE_WATCH_ID) continue;
+    canonical ??= await loadCanonicalWithImages();
+    const info = canonical.find(w => w.id === ev.watchId);
+    if (!info) continue;
+    const { canonicalIndex: _ignored, ...watch } = info;
+    return { watch };
+  }
+  return null;
 }
 
 export const DEFAULT_WEAR_TIMEZONE = 'America/Los_Angeles';

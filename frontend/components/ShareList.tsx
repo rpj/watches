@@ -1,16 +1,18 @@
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import styles from '../styles/Wearage.module.css';
 
 export interface ShareRow {
   id: string;
   name: string;
   sub?: string;
+  /** Where the name links (a watch's post page, a brand's gallery filter). */
+  href?: string;
   thumbnailUrl: string | null;
   /** 0..1 */
   share: number;
   wears: number;
-  lastWornAt: string | null;
 }
 
 interface ShareListProps {
@@ -45,7 +47,7 @@ export default function ShareList({ title, rows, ariaLabel }: ShareListProps) {
                 <tr
                   key={row.id}
                   className={styles.row}
-                  title={`${row.name} · ${p}% · ${row.wears} wears · last ${row.lastWornAt ?? 'never'}`}
+                  title={`${row.name} · ${p}% · ${row.wears} ${row.wears === 1 ? 'wear' : 'wears'}`}
                 >
                   <td className={styles.watchCell}>
                     <div className={styles.watchInner}>
@@ -63,7 +65,13 @@ export default function ShareList({ title, rows, ariaLabel }: ShareListProps) {
                         </span>
                       )}
                       <span className={styles.nameBlock}>
-                        <span className={styles.name}>{row.name}</span>
+                        {row.href ? (
+                          <Link href={row.href} className={`${styles.name} ${styles.nameLink}`}>
+                            {row.name}
+                          </Link>
+                        ) : (
+                          <span className={styles.name}>{row.name}</span>
+                        )}
                         {row.sub && <span className={styles.sub}>{row.sub}</span>}
                       </span>
                     </div>

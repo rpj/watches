@@ -35,14 +35,20 @@ describe('the reserved "nothing on" entry', () => {
     expect(watches.find(w => w.id === WATCH_KURONO)?.wearCount).toBe(1);
   });
 
-  it('surfaces as watch: null from getWearingNow and /api/wearing', async () => {
+  it('is skipped by getWearingNow and /api/wearing, which show the last real watch', async () => {
     await recordWear({ id: 'nothing-0001-aaaa', watchId: NONE_WATCH_ID, wornAt: '2026-10-04T21:00:00-07:00', source: 'app' });
-    const now = await getWearingNow();
-    expect(now?.watch).toBeNull();
-    expect(now?.event.watchId).toBe(NONE_WATCH_ID);
-    const res = await callApi(wearingHandler, { token: null });
+    expect(await getWearingNow()).toBeNull();
+    let res = await callApi(wearingHandler, { token: null });
     expect(res.status).toBe(200);
-    expect(res.json().wearing.watch).toBeNull();
+    expect(res.json()).toEqual({ wearing: null });
+
+    await recordWear(EVENTS[1]); // Kurono, worn before the bare-wrist entry
+    await recordWear({ id: 'nothing-0002-aaaa', watchId: NONE_WATCH_ID, wornAt: '2026-10-05T21:00:00-07:00', source: 'app' });
+    const now = await getWearingNow();
+    expect(now?.watch.id).toBe(WATCH_KURONO);
+    res = await callApi(wearingHandler, { token: null });
+    expect(res.json().wearing.watch.id).toBe(WATCH_KURONO);
+    expect(JSON.stringify(res.json())).not.toContain('wornAt');
   });
 
   it('is debounced like any other entry through the API', async () => {

@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { format, isToday } from 'date-fns';
 import type { WearingNow as WearingNowData } from '../lib/wear';
 import styles from '../styles/WearingNow.module.css';
 
@@ -9,32 +8,21 @@ interface WearingNowProps {
   wearing: WearingNowData | null;
 }
 
+/**
+ * "Last on the wrist": the most recently logged watch. Deliberately no
+ * timestamp and never a bare-wrist state; the server already skips those.
+ */
 export default function WearingNow({ wearing }: WearingNowProps) {
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   if (!wearing) {
     return null;
   }
 
-  const { watch, event } = wearing;
-  // `watch` is null for the reserved "nothing on" entry: a bare wrist.
-  const thumb = watch ? watch.thumbnailUrl ?? watch.imageUrl : null;
-  const name = watch ? `${watch.brand} ${watch.model}`.trim() : 'Nothing right now';
-
-  let since = '';
-  if (mounted) {
-    const worn = new Date(event.wornAt);
-    if (!Number.isNaN(worn.getTime())) {
-      since = isToday(worn) ? format(worn, 'h:mm a') : format(worn, 'MMM d');
-    }
-  }
+  const { watch } = wearing;
+  const thumb = watch.thumbnailUrl ?? watch.imageUrl;
+  const name = `${watch.brand} ${watch.model}`.trim();
 
   return (
-    <section className={styles.wearing} aria-label="Currently wearing">
+    <section className={styles.wearing} aria-label="Last on the wrist">
       {thumb ? (
         <Image
           src={thumb}
@@ -46,21 +34,16 @@ export default function WearingNow({ wearing }: WearingNowProps) {
         />
       ) : (
         <span className={styles.fallback} aria-label={name} role="img">
-          {watch ? watch.brand.charAt(0).toUpperCase() : '–'}
+          {watch.brand.charAt(0).toUpperCase()}
         </span>
       )}
-      <span className={styles.label}>On the wrist</span>
-      {watch ? (
-        <Link
-          href={`/post/${encodeURIComponent(watch.id)}?ref=${encodeURIComponent('/')}`}
-          className={styles.name}
-        >
-          {name}
-        </Link>
-      ) : (
-        <span className={styles.name}>{name}</span>
-      )}
-      {since && <span className={styles.since}>&middot; since {since}</span>}
+      <span className={styles.label}>Last on the wrist</span>
+      <Link
+        href={`/post/${encodeURIComponent(watch.id)}?ref=${encodeURIComponent('/')}`}
+        className={styles.name}
+      >
+        {name}
+      </Link>
       <Link href="/wearage" className={styles.more}>
         wearage &rarr;
       </Link>
