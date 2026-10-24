@@ -49,13 +49,10 @@ struct PickerView: View {
             }
 
             ForEach(visibleWatches) { watch in
-                Button {
-                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                // Hold, don't tap: see HoldToLogRow. The haptic fires there.
+                HoldToLogRow(watch: watch, isCurrent: watch.id == model.state.current?.watchId) {
                     Task { await model.log(watch) }
-                } label: {
-                    WatchRow(watch: watch, isCurrent: watch.id == model.state.current?.watchId)
                 }
-                .buttonStyle(.plain)
                 .accessibilityIdentifier("picker.row.\(watch.id)")
             }
         }
@@ -66,12 +63,20 @@ struct PickerView: View {
         .navigationTitle("Wrist")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                NavigationLink {
+                    HistoryView()
+                } label: {
+                    Image(systemName: "clock.arrow.circlepath")
+                }
+                .accessibilityLabel("History")
+                .accessibilityIdentifier("picker.history")
                 NavigationLink {
                     SettingsView()
                 } label: {
                     Image(systemName: "gearshape")
                 }
+                .accessibilityLabel("Settings")
                 .accessibilityIdentifier("picker.settings")
             }
         }

@@ -79,6 +79,12 @@ public struct WristServices {
         WearAPIClient(configuration: WearAPIConfiguration(baseURL: baseURL, token: token), transport: transport)
     }
 
+    /// Client for the saved connection, or nil until Setup has completed.
+    public func makeClient() -> WearAPIClient? {
+        guard let token = token(), !token.isEmpty, let url = settings.serverURL else { return nil }
+        return makeClient(baseURL: url, token: token)
+    }
+
     /// Store for the saved connection, or nil until Setup has completed.
     public func makeStore() -> WearStore? {
         guard let token = token(), !token.isEmpty, let url = settings.serverURL else { return nil }

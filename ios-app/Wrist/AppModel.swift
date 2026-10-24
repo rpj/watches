@@ -199,6 +199,35 @@ final class AppModel {
         await store?.refresh()
     }
 
+    // MARK: - History
+
+    /// Recent wear events, newest first. Throws WearAPIError on failure.
+    func recentEvents(limit: Int = 100) async throws -> [WearEvent] {
+        guard let client = services.makeClient() else { throw ConnectError.server("Not connected") }
+        return try await client.events(limit: limit)
+    }
+
+    /// Delete one event (server or local) and refresh counts.
+    func deleteEvent(_ id: String) async {
+        guard let store else { return }
+        if lastLogged?.id == id {
+            lastLogged = nil
+            undoDismiss?.cancel()
+        }
+        await store.undo(eventID: id)
+        WristServices.reloadWidgets()
+        await rescheduleNudges()
+    }
+
+    /// Name for a watch id, falling back to the id.
+    func watchName(for id: String) -> String {
+        watch(for: id)?.displayName ?? id
+    }
+
+    func watch(for id: String) -> WearWatch? {
+        state.watches.first { $0.id == id }
+    }
+
     // MARK: - Nudge
 
     func setNudge(_ config: NudgeConfig) async {
