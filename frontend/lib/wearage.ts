@@ -11,11 +11,13 @@ export const NONE_WATCH_ID = 'none';
 /**
  * "Wearage": each watch's share of wrist-time.
  *
- * A watch is credited from the moment it is logged until the next log (the
- * latest log runs to `now`). At the end of every completed local day, up to
- * `sleepHours` hours are deducted from whichever watch is on the wrist at
- * midnight: a cheap, honest stand-in for "I never wear a watch at night".
- * Shares are of the resulting total, never raw hours.
+ * A watch is credited from the moment it is logged until the next log or the
+ * end of that local day, whichever comes first (the latest log runs to `now`
+ * within its day). The wrist is bare every night, so nothing ever carries
+ * into the next day: each day starts with nothing on until a new log. At the
+ * end of every completed local day, up to `sleepHours` hours are deducted
+ * from the last watch of that day: a cheap, honest stand-in for "I take it
+ * off in the evening". Shares are of the resulting total, never raw hours.
  *
  * Pure: no Redis, no env. Local days come from `timeZone` via Intl.
  */
@@ -143,8 +145,12 @@ export function computeWearage(events: WearEvent[], opts: WearageOptions): Weara
 
   for (let i = 0; i < timeline.length; i++) {
     const { e, t } = timeline[i];
-    const end = i + 1 < timeline.length ? timeline[i + 1].t : nowMs;
     const bare = e.watchId === NONE_WATCH_ID;
+    // Credit never crosses the event's own local day: the wrist is bare every
+    // night, so the next log (or the day's end) is where this one stops.
+    const dayEnd = nextLocalDayStart(t, timeZone);
+    const nextLog = i + 1 < timeline.length ? timeline[i + 1].t : nowMs;
+    const end = Math.min(nextLog, dayEnd);
 
     if (t >= sinceMs && !bare) {
       wearsByWatch.set(e.watchId, (wearsByWatch.get(e.watchId) ?? 0) + 1);
@@ -156,24 +162,18 @@ export function computeWearage(events: WearEvent[], opts: WearageOptions): Weara
     const eEnd = Math.min(end, nowMs);
     if (eEnd <= s) continue;
     if (trackingStart === null || s < trackingStart) trackingStart = s;
-    // A bare-wrist interval still ends the previous watch's credit (handled by
-    // `end` above) but earns nothing itself, and there is nothing to deduct.
+    // A bare-wrist interval ends the previous watch's credit (it is the
+    // "next log" above) but earns nothing itself.
     if (bare) continue;
 
-    let dayStart = localDayStart(s, timeZone);
-    while (dayStart < eEnd) {
-      const dayEnd = nextLocalDayStart(dayStart, timeZone);
-      const segStart = Math.max(s, dayStart);
-      const segEnd = Math.min(eEnd, dayEnd);
-      let credit = segEnd - segStart;
-      // This watch is on the wrist at the end of a completed day: sleep comes off it.
-      const completedDay = dayEnd <= nowMs;
-      if (completedDay && eEnd >= dayEnd && sleepMs > 0) {
-        credit = Math.max(0, credit - sleepMs);
-      }
-      msByWatch.set(e.watchId, (msByWatch.get(e.watchId) ?? 0) + credit);
-      dayStart = dayEnd;
+    let credit = eEnd - s;
+    // Last watch of a completed day: sleep comes off it. The current, partial
+    // day gets no deduction until it is over.
+    const completedDay = dayEnd <= nowMs;
+    if (completedDay && eEnd >= dayEnd && sleepMs > 0) {
+      credit = Math.max(0, credit - sleepMs);
     }
+    msByWatch.set(e.watchId, (msByWatch.get(e.watchId) ?? 0) + credit);
   }
 
   const ids = new Set<string>([...msByWatch.keys(), ...wearsByWatch.keys()]);

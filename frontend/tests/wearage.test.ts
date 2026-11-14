@@ -58,18 +58,33 @@ describe('computeWearage', () => {
     expect(s).toEqual({ totalMs: 0, daysTracked: 0, firstEventAt: null, shares: [] });
   });
 
-  it('credits a single watch across completed days minus sleep, and the partial day in full', () => {
+  it('credits a watch only within the day it was logged, minus sleep; later days start bare', () => {
     const s = computeWearage(
       [ev('e1', 'A', '2026-10-22T08:00:00-07:00')],
       { ...base, now: at('2026-10-24T12:00:00-07:00') }
     );
-    // Oct 22: 16h − 7 = 9h; Oct 23: 24h − 7 = 17h; Oct 24 (partial): 12h.
-    expect(s.totalMs).toBe(38 * HOUR);
+    // Oct 22: 16h − 7 = 9h. Oct 23 and Oct 24: nothing was logged, so nothing is credited.
+    expect(s.totalMs).toBe(9 * HOUR);
     expect(s.daysTracked).toBe(3);
     expect(s.firstEventAt).toBe('2026-10-22T08:00:00-07:00');
     expect(s.shares).toEqual([
-      { watchId: 'A', ms: 38 * HOUR, share: 1, wears: 1, lastWornAt: '2026-10-22T08:00:00-07:00' },
+      { watchId: 'A', ms: 9 * HOUR, share: 1, wears: 1, lastWornAt: '2026-10-22T08:00:00-07:00' },
     ]);
+  });
+
+  it('never carries a watch across midnight, even before the next log', () => {
+    const s = computeWearage(
+      [ev('e1', 'A', '2026-10-22T08:00:00-07:00')],
+      { ...base, now: at('2026-10-23T10:00:00-07:00') }
+    );
+    expect(s.shares[0].ms).toBe(9 * HOUR);
+
+    // Logging B the next morning credits B from that moment only; A is untouched.
+    const t = computeWearage(
+      [ev('e1', 'A', '2026-10-22T08:00:00-07:00'), ev('e2', 'B', '2026-10-23T09:00:00-07:00')],
+      { ...base, now: at('2026-10-23T10:00:00-07:00') }
+    );
+    expect(t.shares.map(x => [x.watchId, x.ms / HOUR])).toEqual([['A', 9], ['B', 1]]);
   });
 
   it('splits a mid-day switch and deducts sleep only from the watch on at midnight', () => {
@@ -103,14 +118,12 @@ describe('computeWearage', () => {
       { ...base, now: at('2026-10-23T12:00:00-07:00'), since: at('2026-10-22T00:00:00-07:00') }
     );
     const byId = Object.fromEntries(s.shares.map(x => [x.watchId, x]));
-    // A: Oct 22 full (24 − 7 = 17h) + Oct 23 00:00→10:00 (10h, but A hands over before midnight so no deduction) = 27h.
-    expect(byId.A.ms).toBe(27 * HOUR);
-    expect(byId.A.wears).toBe(0);
-    expect(byId.A.lastWornAt).toBeNull();
+    // A was logged on Oct 20, so it earns nothing inside a window that starts Oct 22.
+    expect(byId.A).toBeUndefined();
     // B: 10:00→12:00 on the partial day.
     expect(byId.B.ms).toBe(2 * HOUR);
     expect(byId.B.wears).toBe(1);
-    expect(s.daysTracked).toBe(2);
+    expect(s.daysTracked).toBe(1);
   });
 
   it('deducts exactly sleepHours on the 25-hour fall-back day', () => {
@@ -118,9 +131,16 @@ describe('computeWearage', () => {
       [ev('e1', 'A', '2026-10-31T12:00:00-07:00')],
       { ...base, now: at('2026-11-02T00:00:00-08:00') }
     );
-    // Oct 31: 12h − 7 = 5h. Nov 1: 25h − 7 = 18h.
-    expect(s.shares[0].ms).toBe(23 * HOUR);
+    // Oct 31: 12h − 7 = 5h. Nov 1 (the 25-hour day): nothing logged, nothing credited.
+    expect(s.shares[0].ms).toBe(5 * HOUR);
     expect(s.daysTracked).toBe(2);
+
+    // Logged on the fall-back day itself: the full 25 hours minus sleep.
+    const t = computeWearage(
+      [ev('e1', 'A', '2026-11-01T00:00:00-07:00')],
+      { ...base, now: at('2026-11-02T00:00:00-08:00') }
+    );
+    expect(t.shares[0].ms).toBe(18 * HOUR);
   });
 
   it('shares sum to one and sort by time then wears', () => {
@@ -153,6 +173,7 @@ describe('computeWearage', () => {
       [ev('e1', 'A', '2026-10-22T00:00:00-07:00')],
       { ...base, sleepHours: 0, now: at('2026-10-24T00:00:00-07:00') }
     );
-    expect(s.totalMs).toBe(48 * HOUR);
+    // The whole of Oct 22 and nothing after it.
+    expect(s.totalMs).toBe(24 * HOUR);
   });
 });
