@@ -46,6 +46,20 @@ public actor WearStore {
         }
     }
 
+    /// Day-boundary rule shared by the app, widget, and notifications.
+    public struct Today {
+        /// The current event only if it was logged today in `calendar`'s zone.
+        /// The wrist is bare every night, so yesterday's log never shows as
+        /// "wearing now"; a new day starts with nothing on until the next log.
+        public static func current(in state: State, now: Date = Date(), calendar: Calendar = .autoupdatingCurrent) -> WearEvent? {
+            guard let current = state.current,
+                  NudgeSchedule.isLoggedToday(latestWornAt: current.wornAt, now: now, calendar: calendar) else {
+                return nil
+            }
+            return current
+        }
+    }
+
     enum FlushDecision: Equatable {
         /// The server rejected this event for good (4xx other than auth/rate limit); drop it.
         case drop

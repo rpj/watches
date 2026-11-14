@@ -424,6 +424,22 @@ final class WearStoreTests: XCTestCase {
         XCTAssertFalse(baseWatches[0].isNothing)
     }
 
+    // MARK: - Day boundary
+
+    func testCurrentTodayDropsYesterdaysLog() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let state = WearStore.State(watches: baseWatches, current: baseCurrent, pendingCount: 0,
+                                    lastSyncAt: nil, lastError: nil, isLoaded: true)
+        // baseCurrent was logged 2026-10-03 08:05 -07:00.
+        let sameDay = WearDates.parse("2026-10-03T22:00:00-07:00")!
+        XCTAssertEqual(WearStore.Today.current(in: state, now: sameDay, calendar: calendar), baseCurrent)
+        let nextMorning = WearDates.parse("2026-10-04T06:00:00-07:00")!
+        XCTAssertNil(WearStore.Today.current(in: state, now: nextMorning, calendar: calendar),
+                     "the wrist is bare every night; a new day starts with nothing on")
+        XCTAssertNil(WearStore.Today.current(in: .empty, now: sameDay, calendar: calendar))
+    }
+
     // MARK: - Observation and policy
 
     func testUpdatesStreamEmitsCurrentThenChanges() async {

@@ -60,13 +60,24 @@ final class AppModel {
 
     // MARK: - Derived
 
-    var currentWatch: WearWatch? {
-        state.watches.first { $0.id == state.current?.watchId }
+    /// Today's event only. The wrist is bare every night, so yesterday's log
+    /// is never "wearing now" (see WearStore.Today).
+    var currentToday: WearEvent? {
+        WearStore.Today.current(in: state)
     }
 
-    /// True when the latest event is the reserved "nothing on" entry.
+    var currentWatch: WearWatch? {
+        state.watches.first { $0.id == currentToday?.watchId }
+    }
+
+    /// True when today's latest event is the reserved "nothing on" entry.
     var isNothingOn: Bool {
-        state.current?.watchId == WearWatch.noneID
+        currentToday?.watchId == WearWatch.noneID
+    }
+
+    /// The last log is from a previous day: the day rolled over with nothing on.
+    var isNewDay: Bool {
+        state.current != nil && currentToday == nil
     }
 
     var isLoggedToday: Bool {

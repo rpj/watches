@@ -53,13 +53,19 @@ struct TopWatchesView: View {
 
     // MARK: - Derived data
 
-    private var current: WearWatch? {
-        entry.state.watches.first { $0.id == entry.state.current?.watchId }
+    /// Today's event only, judged at the entry's date so the midnight timeline
+    /// entry flips to "Nothing on" without a reload (see WearStore.Today).
+    private var currentEvent: WearEvent? {
+        WearStore.Today.current(in: entry.state, now: entry.date)
     }
 
-    /// The latest event is the reserved "nothing on" entry.
+    private var current: WearWatch? {
+        entry.state.watches.first { $0.id == currentEvent?.watchId }
+    }
+
+    /// Bare wrist: either logged as "nothing on" today, or the day rolled over.
     private var isNothingOn: Bool {
-        entry.state.current?.watchId == WearWatch.noneID
+        currentEvent?.watchId == WearWatch.noneID || (entry.state.current != nil && currentEvent == nil)
     }
 
     /// Most-worn three, including the current watch: on a new day re-logging

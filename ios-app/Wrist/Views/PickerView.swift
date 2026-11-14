@@ -22,10 +22,10 @@ struct PickerView: View {
         List {
             CurrentWatchCard(
                 watch: model.currentWatch,
-                since: model.state.current?.wornAt,
+                since: model.currentToday?.wornAt,
                 pendingCount: model.state.pendingCount,
                 errorText: errorText,
-                isNothingOn: model.isNothingOn
+                isNothingOn: model.isNothingOn || model.isNewDay
             )
             .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16))
@@ -59,7 +59,7 @@ struct PickerView: View {
 
             ForEach(visibleWatches) { watch in
                 // Hold, don't tap: see HoldToLogRow. The haptic fires there.
-                HoldToLogRow(watch: watch, isCurrent: watch.id == model.state.current?.watchId) {
+                HoldToLogRow(watch: watch, isCurrent: watch.id == model.currentToday?.watchId) {
                     Task { await model.log(watch) }
                 }
                 .accessibilityIdentifier("picker.row.\(watch.id)")

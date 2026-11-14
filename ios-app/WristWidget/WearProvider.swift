@@ -21,8 +21,16 @@ struct WearProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<WearEntry>) -> Void) {
         Task {
             let entry = await load()
+            // A second entry dated at the next local midnight makes the widget
+            // flip to "Nothing on" when the day rolls over, with no reload.
+            let calendar = Calendar.autoupdatingCurrent
+            let now = entry.date
+            var entries = [entry]
+            if let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) {
+                entries.append(WearEntry(date: midnight, state: entry.state, thumbnails: entry.thumbnails, isPlaceholder: false))
+            }
             // The app and the intent reload timelines after every change; this is a safety net.
-            completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(6 * 3600))))
+            completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(6 * 3600))))
         }
     }
 
