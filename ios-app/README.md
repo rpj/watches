@@ -38,6 +38,7 @@ The generated `Wrist.xcodeproj` is disposable. Treat it that way:
 - **Change project settings in `project.yml`, not in Xcode's inspector.** Signing, capabilities, build settings, schemes and Info.plist keys all live in the YAML; anything edited in the Xcode UI is wiped by the next regenerate.
 - **Adding a file** = drop it in the target's folder (`Wrist/`, `WristWidget/`, `WristTests/`, `WristUITests/`) and regenerate. Targets pick up their folders recursively.
 - **Package code** (`WristCore/`, `WristKit/`) needs no regenerate; SwiftPM sees new files directly.
+- **Every change to the app bumps the version** (`MARKETING_VERSION`, shown in Settings as "Wrist x.y") so a reinstall is verifiable at a glance. Minor bumps for features and fixes, major for anything that changes the server contract.
 - A one-liner for the common case: `DEVELOPMENT_TEAM=YOUR_TEAM_ID xcodegen generate && open Wrist.xcodeproj`. Put `export DEVELOPMENT_TEAM=...` in your shell profile to drop the prefix.
 
 ## Run in the simulator
